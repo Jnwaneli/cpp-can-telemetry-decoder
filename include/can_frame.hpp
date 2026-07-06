@@ -12,10 +12,17 @@ struct CanFrame {
 };
 
 inline void print_frame(const CanFrame& frame) {
-    std::cout << "CAN ID: 0x" << std::hex << frame.id << std::dec << std::endl;
-    std::cout << "DLC: " << static_cast<int>(frame.dlc) << std::endl;
+    std::cout << "CAN ID: 0x"
+              << std::hex
+              << frame.id
+              << std::dec
+              << std::endl;
 
-    std::cout << "Data bytes: ";
+    std::cout << "DLC: "
+              << static_cast<int>(frame.dlc)
+              << std::endl;
+
+    std::cout << "Data: ";
 
     for (int i = 0; i < frame.dlc; i++) {
         std::cout << "0x"
