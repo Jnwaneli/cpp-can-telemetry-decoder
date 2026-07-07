@@ -1,43 +1,43 @@
 #include <iostream>
 #include <vector>
 #include "can_frame.hpp"
+#include "can_validation.hpp"
 
-void pointerBasics() {
-    int x = 10;
+void process_frame(const CanFrame& frame) {
+    print_frame(frame);
 
-    int* p = &x;
-    int& r = x;
+    bool has_fault = false;
 
-    std::cout << "Pointer basics:" << std::endl;
-    std::cout << "x value: " << x << std::endl;
-    std::cout << "x address: " << &x << std::endl;
-    std::cout << "p stores address: " << p << std::endl;
-    std::cout << "*p dereferenced value: " << *p << std::endl;
-    std::cout << "r reference value: " << r << std::endl;
+    if (!is_known_id(frame.id)) {
+        std::cout << "FAULT: Unknown CAN ID" << std::endl;
+        has_fault = true;
+    }
 
-    *p = 20;
-    std::cout << "After *p = 20, x is: " << x << std::endl;
+    if (!has_valid_dlc(frame)) {
+        std::cout << "FAULT: Invalid DLC" << std::endl;
+        has_fault = true;
+    }
 
-    r = 30;
-    std::cout << "After r = 30, x is: " << x << std::endl;
+    if (!has_fault) {
+        std::cout << "Frame status: OK" << std::endl;
+    }
 }
 
 int main() {
-    pointerBasics();
-
-    std::cout << std::endl;
-    std::cout << "Simulated CAN log:" << std::endl;
-
     std::vector<CanFrame> log = {
         {0x100, 8, {0x00, 0x08, 0x10, 0x00, 0xFF, 0x0A, 0x01, 0x05}},
         {0x101, 8, {0x88, 0x13, 0x2C, 0x01, 0x00, 0x00, 0x00, 0x00}},
         {0x102, 8, {0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
         {0x999, 8, {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}},
-        {0x100, 4, {0x00, 0x08, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00}}
+        {0x100, 4, {0x00, 0x08, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00}},
+        {0x200, 8, {0x34, 0x12, 0x78, 0x56, 0x03, 0x64, 0x01, 0x00}}
     };
 
+    std::cout << "Simulated CAN log validation" << std::endl;
+    std::cout << "============================" << std::endl;
+
     for (const CanFrame& frame : log) {
-        print_frame(frame);
+        process_frame(frame);
         std::cout << std::endl;
     }
 
