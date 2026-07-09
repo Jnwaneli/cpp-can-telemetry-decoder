@@ -1618,3 +1618,593 @@ This would help confirm that the telemetry system is reading, packing, transmitt
 ```text
 For large objects like vectors and CAN frame structs, use const reference when the function only needs to read the data. In firmware, UART is one of the simplest ways to print debug information from a microcontroller.
 ```
+---
+
+# Day 5 — Circular Buffer and Debugging Basics
+
+## Main goals
+
+```text
+Understand circular buffers.
+Create include/circular_buffer.hpp.
+Create src/circular_buffer.cpp.
+Implement push().
+Implement pop().
+Implement is_empty().
+Implement is_full().
+Solve Remove Nth Node From End of List.
+Add SWD/JTAG/ST-LINK debugging notes.
+```
+
+---
+
+## Circular buffer concept
+
+A circular buffer is a fixed-size buffer that wraps around when it reaches the end.
+
+Instead of moving all elements around in memory, it uses indexes to track where to write next and where to read next.
+
+Important variables:
+
+```text
+head = next write location
+tail = next read location
+count = number of stored items
+```
+
+---
+
+## Head
+
+The head points to the next location where new data will be written.
+
+When data is pushed:
+
+```text
+store item at head
+move head forward
+wrap head around if needed
+increase count
+```
+
+Code idea:
+
+```cpp
+buffer_[head_] = frame;
+head_ = (head_ + 1) % Capacity;
+count_++;
+```
+
+---
+
+## Tail
+
+The tail points to the next location where data will be read.
+
+When data is popped:
+
+```text
+read item from tail
+move tail forward
+wrap tail around if needed
+decrease count
+```
+
+Code idea:
+
+```cpp
+frame = buffer_[tail_];
+tail_ = (tail_ + 1) % Capacity;
+count_--;
+```
+
+---
+
+## Count
+
+The count stores how many items are currently in the buffer.
+
+```text
+count == 0 means empty
+count == Capacity means full
+```
+
+This makes it easy to implement:
+
+```cpp
+bool is_empty() const {
+    return count_ == 0;
+}
+
+bool is_full() const {
+    return count_ == Capacity;
+}
+```
+
+---
+
+## Why use modulo?
+
+Modulo wraps the index back to zero.
+
+Example:
+
+```text
+Capacity = 5
+head = 4
+
+(head + 1) % Capacity
+(4 + 1) % 5
+5 % 5 = 0
+```
+
+So the next index becomes `0`.
+
+That is what makes the buffer circular.
+
+---
+
+## Why circular buffers are common in embedded systems
+
+Circular buffers are common in embedded systems because they use fixed memory and avoid dynamic allocation.
+
+Benefits:
+
+```text
+fixed size
+predictable memory usage
+no new/delete needed
+efficient push and pop
+useful for interrupt-driven data
+good for streaming data
+```
+
+Simple explanation:
+
+```text
+Circular buffers are useful in embedded systems because they store streaming data with predictable memory usage.
+```
+
+---
+
+## How UART RX buffers relate to circular buffers
+
+UART receives bytes over time.
+
+The microcontroller may receive bytes faster than the main program can process them.
+
+A UART RX interrupt can place each received byte into a circular buffer.
+
+Then the main loop can read bytes from the buffer later.
+
+Example flow:
+
+```text
+UART byte arrives
+interrupt runs
+byte is pushed into RX circular buffer
+main loop pops bytes and processes command/message
+```
+
+This prevents received bytes from being lost if the main code is busy.
+
+---
+
+## How CAN receive queues relate to circular buffers
+
+CAN frames can arrive at unpredictable times.
+
+A CAN receive interrupt or driver can place incoming frames into a queue or circular buffer.
+
+Then the main program can process the frames one at a time.
+
+Example flow:
+
+```text
+CAN frame arrives
+CAN RX interrupt/driver stores frame in buffer
+main loop pops frame
+decoder checks ID and DLC
+decoder decodes payload
+fault analyzer checks for problems
+```
+
+This separates fast receiving from slower processing.
+
+---
+
+## `push(const CanFrame& frame)`
+
+The `push` function adds a frame to the buffer.
+
+It should return:
+
+```text
+true if the frame was stored
+false if the buffer was full
+```
+
+Code idea:
+
+```cpp
+bool CircularBuffer::push(const CanFrame& frame) {
+    if (is_full()) {
+        return false;
+    }
+
+    buffer_[head_] = frame;
+    head_ = (head_ + 1) % Capacity;
+    count_++;
+
+    return true;
+}
+```
+
+---
+
+## `pop(CanFrame& frame)`
+
+The `pop` function removes a frame from the buffer and gives it back through the reference parameter.
+
+It should return:
+
+```text
+true if a frame was read
+false if the buffer was empty
+```
+
+Code idea:
+
+```cpp
+bool CircularBuffer::pop(CanFrame& frame) {
+    if (is_empty()) {
+        return false;
+    }
+
+    frame = buffer_[tail_];
+    tail_ = (tail_ + 1) % Capacity;
+    count_--;
+
+    return true;
+}
+```
+
+---
+
+## Why does `pop` use `CanFrame& frame`?
+
+`pop` needs to output a frame to the caller.
+
+Using a non-const reference lets the function write into the caller's variable.
+
+Example:
+
+```cpp
+CanFrame frame{};
+
+if (rx_buffer.pop(frame)) {
+    process_frame(frame);
+}
+```
+
+Simple explanation:
+
+```text
+pop uses CanFrame& because it needs to modify the caller's frame variable with the popped data.
+```
+
+---
+
+## Why does `push` use `const CanFrame& frame`?
+
+`push` only needs to read the frame being passed in and copy it into the buffer.
+
+It should not modify the caller's frame.
+
+Simple explanation:
+
+```text
+push uses const CanFrame& because it only reads the frame and avoids unnecessary copying.
+```
+
+---
+
+## Buffer full case
+
+If the buffer is full, `push` should fail.
+
+```cpp
+if (is_full()) {
+    return false;
+}
+```
+
+This matters because embedded systems should handle overflow clearly.
+
+Possible full-buffer strategies:
+
+```text
+drop the new frame
+overwrite the oldest frame
+set an overflow flag
+count dropped frames
+trigger a fault/debug message
+```
+
+For this project, the simple approach is:
+
+```text
+If the buffer is full, return false and print that the frame was dropped.
+```
+
+---
+
+## Buffer empty case
+
+If the buffer is empty, `pop` should fail.
+
+```cpp
+if (is_empty()) {
+    return false;
+}
+```
+
+This prevents the program from reading invalid data.
+
+Simple explanation:
+
+```text
+If there is nothing stored, pop should not return a fake frame.
+```
+
+---
+
+## LeetCode 19 — Remove Nth Node From End of List
+
+Pattern:
+
+```text
+linked list two pointers
+dummy node
+fixed gap
+```
+
+Main idea:
+
+```text
+Create a dummy node before head.
+Move fast n steps ahead.
+Move fast and slow together until fast reaches the end.
+slow will be before the node to remove.
+Skip slow->next.
+Return dummy.next.
+```
+
+Important removal line:
+
+```cpp
+slow->next = slow->next->next;
+```
+
+This removes the target node by skipping over it.
+
+---
+
+## Why use a dummy node for this problem?
+
+A dummy node handles the case where the head itself needs to be removed.
+
+Example:
+
+```text
+List: 1 -> 2 -> 3
+Remove 3rd node from end
+
+The node to remove is 1, the head.
+```
+
+With a dummy node before the head, removing the head becomes easier.
+
+```cpp
+ListNode dummy(0);
+dummy.next = head;
+```
+
+At the end:
+
+```cpp
+return dummy.next;
+```
+
+Time complexity:
+
+```text
+O(n)
+```
+
+Space complexity:
+
+```text
+O(1)
+```
+
+---
+
+## SWD
+
+SWD stands for Serial Wire Debug.
+
+It is a debugging interface commonly used with STM32 microcontrollers.
+
+It lets me:
+
+```text
+flash code
+set breakpoints
+step through firmware
+watch variables
+inspect registers
+debug embedded code
+```
+
+SWD usually uses fewer pins than JTAG.
+
+Typical SWD signals:
+
+```text
+SWDIO
+SWCLK
+GND
+3.3 V reference
+NRST optional
+```
+
+---
+
+## JTAG
+
+JTAG is another debugging/programming interface.
+
+It usually uses more pins than SWD.
+
+It can be used for:
+
+```text
+debugging
+programming
+boundary scan testing
+```
+
+For STM32 work, SWD is usually more common because it uses fewer pins.
+
+---
+
+## ST-LINK
+
+ST-LINK is the programmer/debugger used for STM32 development.
+
+It connects the computer to the STM32 and allows flashing and debugging.
+
+ST-LINK can be used to:
+
+```text
+flash firmware
+start a debug session
+set breakpoints
+step through code
+inspect variables
+view registers
+reset the microcontroller
+```
+
+Many STM32 Nucleo boards include an onboard ST-LINK.
+
+---
+
+## Breakpoint
+
+A breakpoint pauses the program at a specific line.
+
+Use it to check:
+
+```text
+Did the code reach this line?
+What are the variable values here?
+Why did this branch run?
+What happens before the bug?
+```
+
+Breakpoints are useful because they let me stop the firmware while it is running and inspect the current state.
+
+---
+
+## Watch variable
+
+A watch variable lets me monitor a variable while debugging.
+
+Useful watch variables:
+
+```text
+adc_raw
+voltage
+frame.id
+frame.dlc
+counter
+buffer count
+head
+tail
+fault flag
+```
+
+Watching variables helps me see how values change as the program runs.
+
+---
+
+## Step over
+
+Step over runs the current line without entering a function call.
+
+Use it when:
+
+```text
+I trust the function
+I only care about the next line
+I do not need to debug inside the function
+```
+
+---
+
+## Step into
+
+Step into enters the function being called.
+
+Use it when:
+
+```text
+I want to debug inside that function
+I do not trust the function yet
+I want to see exactly what happens
+```
+
+---
+
+## Register view
+
+Register view shows CPU and peripheral registers.
+
+This is useful because embedded peripherals are controlled by registers.
+
+Examples:
+
+```text
+GPIO registers
+ADC registers
+UART registers
+timer registers
+CAN registers
+```
+
+Register view helps confirm whether hardware is configured correctly.
+
+---
+
+## Day 5 main interview idea
+
+```text
+Circular buffers are common in embedded systems because they provide fixed-size, predictable storage for streaming data like UART bytes or CAN frames. They use head and tail indexes to avoid moving memory and wrap around with modulo arithmetic.
+```
+
+---
+
+## Things to keep practicing
+
+```text
+how head moves during push
+how tail moves during pop
+why modulo creates wraparound
+why count helps detect empty/full
+why UART RX often uses buffers
+why CAN receive queues are buffer-like
+how dummy nodes help linked list deletion
+basic debugger vocabulary: breakpoint, watch, step over, step into
+```

@@ -6,6 +6,7 @@
 #include "can_frame.hpp"
 #include "can_validation.hpp"
 #include "bit_utils.hpp"
+#include "circular_buffer.hpp"
 
 void print_by_value(std::vector<int> readings) {
     std::cout << "print_by_value: ";
@@ -115,6 +116,46 @@ void process_frame(const CanFrame& frame) {
     }
 }
 
+void circularBufferPractice(const std::vector<CanFrame>& log) {
+    CircularBuffer rx_buffer;
+
+    std::cout << "Circular buffer practice:" << std::endl;
+
+    for (const CanFrame& frame : log) {
+        bool pushed = rx_buffer.push(frame);
+
+        if (pushed) {
+            std::cout << "Pushed frame ID 0x"
+                      << std::hex
+                      << frame.id
+                      << std::dec
+                      << ". Buffer size: "
+                      << rx_buffer.size()
+                      << std::endl;
+        } else {
+            std::cout << "Buffer full. Dropped frame ID 0x"
+                      << std::hex
+                      << frame.id
+                      << std::dec
+                      << std::endl;
+        }
+    }
+
+    std::cout << std::endl;
+    std::cout << "Popping frames from circular buffer:" << std::endl;
+
+    CanFrame frame{};
+
+    while (rx_buffer.pop(frame)) {
+        process_frame(frame);
+        std::cout << std::endl;
+    }
+
+    if (rx_buffer.is_empty()) {
+        std::cout << "Buffer is now empty." << std::endl;
+    }
+}
+
 int main() {
     referencePractice();
 
@@ -127,13 +168,7 @@ int main() {
         {0x200, 8, {0x34, 0x12, 0x78, 0x56, 0x03, 0x64, 0x01, 0x00}}
     };
 
-    std::cout << "Simulated CAN log validation and decoding" << std::endl;
-    std::cout << "=========================================" << std::endl;
-
-    for (const CanFrame& frame : log) {
-        process_frame(frame);
-        std::cout << std::endl;
-    }
+    circularBufferPractice(log);
 
     return 0;
 }

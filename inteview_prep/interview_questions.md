@@ -1822,3 +1822,824 @@ Microcontrollers read real-world signals through peripherals like GPIO, ADC, UAR
 ```text
 UART is one of the simplest ways to see what firmware is doing while it runs.
 ```
+---
+
+# Week 2 Day 5 — Circular Buffers and Debugging
+
+## 59. What is a circular buffer?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A circular buffer is a fixed-size buffer that wraps around when it reaches the end.
+
+It uses indexes instead of shifting data around.
+
+Important parts:
+
+```text
+head = next write location
+tail = next read location
+count = number of stored items
+```
+
+Simple version:
+
+```text
+A circular buffer stores streaming data in fixed memory and wraps around when it reaches the end.
+```
+
+---
+
+## 60. What does `head` mean in a circular buffer?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`head` is the next write location.
+
+When new data is pushed into the buffer, it is stored at `head`.
+
+Then `head` moves forward.
+
+Example:
+
+```cpp
+buffer_[head_] = frame;
+head_ = (head_ + 1) % Capacity;
+```
+
+Simple version:
+
+```text
+head tells the buffer where the next new item will be written.
+```
+
+---
+
+## 61. What does `tail` mean in a circular buffer?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`tail` is the next read location.
+
+When data is popped from the buffer, it is read from `tail`.
+
+Then `tail` moves forward.
+
+Example:
+
+```cpp
+frame = buffer_[tail_];
+tail_ = (tail_ + 1) % Capacity;
+```
+
+Simple version:
+
+```text
+tail tells the buffer where the next item will be read from.
+```
+
+---
+
+## 62. What does `count` mean in a circular buffer?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`count` stores how many items are currently in the buffer.
+
+It helps detect whether the buffer is empty or full.
+
+```cpp
+bool is_empty() const {
+    return count_ == 0;
+}
+
+bool is_full() const {
+    return count_ == Capacity;
+}
+```
+
+Simple version:
+
+```text
+count tracks how many valid items are currently stored.
+```
+
+---
+
+## 63. Why does a circular buffer use modulo?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Modulo wraps the index back to zero after it reaches the end.
+
+Example:
+
+```text
+Capacity = 5
+head = 4
+
+(head + 1) % 5 = 0
+```
+
+So after index `4`, the next index becomes `0`.
+
+Simple version:
+
+```text
+Modulo creates the wraparound behavior that makes the buffer circular.
+```
+
+---
+
+## 64. Why are circular buffers common in embedded systems?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Circular buffers are common in embedded systems because they use fixed-size memory and avoid dynamic allocation.
+
+Benefits:
+
+```text
+fixed memory usage
+predictable behavior
+no new/delete
+efficient push and pop
+good for streaming data
+useful with interrupts
+```
+
+Simple version:
+
+```text
+Circular buffers are useful in embedded systems because they handle streaming data with predictable memory usage.
+```
+
+---
+
+## 65. How does a UART RX buffer relate to a circular buffer?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+UART receives bytes over time.
+
+A UART interrupt can push each received byte into a circular buffer.
+
+Then the main program can pop bytes from the buffer later.
+
+Example flow:
+
+```text
+UART byte arrives
+interrupt runs
+byte is pushed into RX buffer
+main loop pops bytes and processes them
+```
+
+Simple version:
+
+```text
+A UART RX circular buffer prevents received bytes from being lost while the main code is busy.
+```
+
+---
+
+## 66. How does a CAN receive queue relate to a circular buffer?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+CAN frames can arrive at unpredictable times.
+
+A CAN receive interrupt or driver can store incoming frames in a queue or circular buffer.
+
+Then the main program can process frames one by one.
+
+Example flow:
+
+```text
+CAN frame arrives
+driver stores frame in buffer
+main loop pops frame
+decoder checks ID and DLC
+decoder decodes payload
+fault analyzer checks for problems
+```
+
+Simple version:
+
+```text
+A CAN receive queue separates fast frame reception from slower decoding and fault analysis.
+```
+
+---
+
+## 67. What should `push(const CanFrame& frame)` do?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`push` should add a frame to the buffer if there is space.
+
+It returns:
+
+```text
+true if the frame was stored
+false if the buffer was full
+```
+
+Example:
+
+```cpp
+bool CircularBuffer::push(const CanFrame& frame) {
+    if (is_full()) {
+        return false;
+    }
+
+    buffer_[head_] = frame;
+    head_ = (head_ + 1) % Capacity;
+    count_++;
+
+    return true;
+}
+```
+
+Simple version:
+
+```text
+push stores a new frame at head, moves head forward, and increases count.
+```
+
+---
+
+## 68. What should `pop(CanFrame& frame)` do?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`pop` should remove a frame from the buffer if one is available.
+
+It returns:
+
+```text
+true if a frame was read
+false if the buffer was empty
+```
+
+Example:
+
+```cpp
+bool CircularBuffer::pop(CanFrame& frame) {
+    if (is_empty()) {
+        return false;
+    }
+
+    frame = buffer_[tail_];
+    tail_ = (tail_ + 1) % Capacity;
+    count_--;
+
+    return true;
+}
+```
+
+Simple version:
+
+```text
+pop reads the frame at tail, moves tail forward, and decreases count.
+```
+
+---
+
+## 69. Why does `push` use `const CanFrame& frame`?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`push` only needs to read the frame being passed in.
+
+It should not modify the caller's frame.
+
+Using `const CanFrame&` avoids unnecessary copying and prevents accidental modification.
+
+Simple version:
+
+```text
+push uses const reference because it only reads the input frame.
+```
+
+---
+
+## 70. Why does `pop` use `CanFrame& frame`?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`pop` needs to give a frame back to the caller.
+
+Using a non-const reference lets the function write into the caller's variable.
+
+Example:
+
+```cpp
+CanFrame frame{};
+
+if (rx_buffer.pop(frame)) {
+    process_frame(frame);
+}
+```
+
+Simple version:
+
+```text
+pop uses non-const reference because it needs to modify the caller's output variable.
+```
+
+---
+
+## 71. What should happen if a circular buffer is full?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+If the buffer is full, the program must handle overflow.
+
+Possible strategies:
+
+```text
+drop the new item
+overwrite the oldest item
+set an overflow flag
+count dropped items
+print/debug a warning
+```
+
+For this project:
+
+```text
+If the buffer is full, push returns false and the frame is dropped.
+```
+
+Simple version:
+
+```text
+A full buffer should be handled intentionally instead of silently corrupting data.
+```
+
+---
+
+## 72. What should happen if a circular buffer is empty?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+If the buffer is empty, `pop` should fail and return false.
+
+This prevents reading invalid data.
+
+Example:
+
+```cpp
+if (is_empty()) {
+    return false;
+}
+```
+
+Simple version:
+
+```text
+An empty buffer should not return fake or invalid data.
+```
+
+---
+
+## 73. What is SWD?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+SWD stands for Serial Wire Debug.
+
+It is a debugging interface commonly used with STM32 microcontrollers.
+
+SWD can be used to:
+
+```text
+flash code
+set breakpoints
+step through firmware
+watch variables
+inspect registers
+debug embedded code
+```
+
+Simple version:
+
+```text
+SWD is the common STM32 debug interface used to program and debug firmware.
+```
+
+---
+
+## 74. What is JTAG?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+JTAG is a debugging and programming interface.
+
+It usually uses more pins than SWD.
+
+It can be used for:
+
+```text
+debugging
+programming
+boundary scan testing
+```
+
+Simple version:
+
+```text
+JTAG is another hardware debugging interface, but STM32 projects often use SWD because it needs fewer pins.
+```
+
+---
+
+## 75. What is ST-LINK?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+ST-LINK is STMicroelectronics' programmer/debugger for STM32 boards.
+
+It lets the computer communicate with the STM32 for flashing and debugging.
+
+It can be used to:
+
+```text
+flash firmware
+start a debug session
+set breakpoints
+step through code
+inspect variables
+view registers
+reset the microcontroller
+```
+
+Simple version:
+
+```text
+ST-LINK is the tool that lets me program and debug STM32 microcontrollers.
+```
+
+---
+
+## 76. What is a breakpoint?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A breakpoint pauses the program at a specific line of code.
+
+It lets me inspect the program state at that moment.
+
+Use breakpoints to check:
+
+```text
+Did the code reach this line?
+What are the variable values?
+Did this branch run?
+What happened before the bug?
+```
+
+Simple version:
+
+```text
+A breakpoint stops the program so I can inspect what is happening.
+```
+
+---
+
+## 77. What is a watch variable?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A watch variable is a variable I monitor during debugging.
+
+Examples:
+
+```text
+adc_raw
+voltage
+frame.id
+frame.dlc
+counter
+head
+tail
+count
+fault flag
+```
+
+Simple version:
+
+```text
+A watch variable lets me see how a variable changes while debugging.
+```
+
+---
+
+## 78. What is step over?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Step over runs the current line without entering any function call on that line.
+
+Use it when:
+
+```text
+I trust the function
+I only want to go to the next line
+I do not need to debug inside the function
+```
+
+Simple version:
+
+```text
+Step over executes a function call without going inside it.
+```
+
+---
+
+## 79. What is step into?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Step into enters the function being called.
+
+Use it when:
+
+```text
+I want to debug inside that function
+I do not trust the function yet
+I want to see exactly what happens
+```
+
+Simple version:
+
+```text
+Step into lets me follow execution inside a function.
+```
+
+---
+
+## 80. What is register view?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Register view shows CPU and peripheral registers during debugging.
+
+This is useful because embedded peripherals are controlled by registers.
+
+Examples:
+
+```text
+GPIO registers
+ADC registers
+UART registers
+timer registers
+CAN registers
+```
+
+Simple version:
+
+```text
+Register view lets me inspect low-level hardware configuration and status.
+```
+
+---
+
+## Day 5 Core Interview Summary
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+```text
+Circular buffers are common in embedded systems because they provide fixed-size, predictable storage for streaming data like UART bytes or CAN frames. They use head and tail indexes to avoid moving memory and wrap around with modulo arithmetic.
+```
