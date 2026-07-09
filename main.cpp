@@ -8,48 +8,6 @@
 #include "bit_utils.hpp"
 #include "circular_buffer.hpp"
 
-void print_by_value(std::vector<int> readings) {
-    std::cout << "print_by_value: ";
-
-    for (int reading : readings) {
-        std::cout << reading << " ";
-    }
-
-    std::cout << std::endl;
-}
-
-void print_by_reference(std::vector<int>& readings) {
-    std::cout << "print_by_reference: ";
-
-    for (int reading : readings) {
-        std::cout << reading << " ";
-    }
-
-    std::cout << std::endl;
-}
-
-void print_by_const_reference(const std::vector<int>& readings) {
-    std::cout << "print_by_const_reference: ";
-
-    for (int reading : readings) {
-        std::cout << reading << " ";
-    }
-
-    std::cout << std::endl;
-}
-
-void referencePractice() {
-    std::vector<int> adc_readings = {2048, 16, 2815};
-
-    std::cout << "Reference practice:" << std::endl;
-
-    print_by_value(adc_readings);
-    print_by_reference(adc_readings);
-    print_by_const_reference(adc_readings);
-
-    std::cout << std::endl;
-}
-
 void decode_analog_inputs(const CanFrame& frame) {
     if (frame.id != 0x100) {
         return;
@@ -116,10 +74,8 @@ void process_frame(const CanFrame& frame) {
     }
 }
 
-void circularBufferPractice(const std::vector<CanFrame>& log) {
-    CircularBuffer rx_buffer;
-
-    std::cout << "Circular buffer practice:" << std::endl;
+void load_frames_into_buffer(const std::vector<CanFrame>& log, CircularBuffer& rx_buffer) {
+    std::cout << "Loading simulated CAN frames into RX buffer:" << std::endl;
 
     for (const CanFrame& frame : log) {
         bool pushed = rx_buffer.push(frame);
@@ -133,7 +89,7 @@ void circularBufferPractice(const std::vector<CanFrame>& log) {
                       << rx_buffer.size()
                       << std::endl;
         } else {
-            std::cout << "Buffer full. Dropped frame ID 0x"
+            std::cout << "RX buffer full. Dropped frame ID 0x"
                       << std::hex
                       << frame.id
                       << std::dec
@@ -142,7 +98,11 @@ void circularBufferPractice(const std::vector<CanFrame>& log) {
     }
 
     std::cout << std::endl;
-    std::cout << "Popping frames from circular buffer:" << std::endl;
+}
+
+void process_buffered_frames(CircularBuffer& rx_buffer) {
+    std::cout << "Processing buffered CAN frames:" << std::endl;
+    std::cout << "===============================" << std::endl;
 
     CanFrame frame{};
 
@@ -152,23 +112,23 @@ void circularBufferPractice(const std::vector<CanFrame>& log) {
     }
 
     if (rx_buffer.is_empty()) {
-        std::cout << "Buffer is now empty." << std::endl;
+        std::cout << "RX buffer is now empty." << std::endl;
     }
 }
 
 int main() {
-    referencePractice();
-
-    std::vector<CanFrame> log = {
+    std::vector<CanFrame> simulated_log = {
         {0x100, 8, {0x00, 0x08, 0x10, 0x00, 0xFF, 0x0A, 0x01, 0x05}},
         {0x101, 8, {0x88, 0x13, 0x2C, 0x01, 0x00, 0x00, 0x00, 0x00}},
         {0x102, 8, {0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
         {0x999, 8, {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}},
-        {0x100, 4, {0x00, 0x08, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00}},
-        {0x200, 8, {0x34, 0x12, 0x78, 0x56, 0x03, 0x64, 0x01, 0x00}}
+        {0x100, 4, {0x00, 0x08, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00}}
     };
 
-    circularBufferPractice(log);
+    CircularBuffer rx_buffer;
+
+    load_frames_into_buffer(simulated_log, rx_buffer);
+    process_buffered_frames(rx_buffer);
 
     return 0;
 }
