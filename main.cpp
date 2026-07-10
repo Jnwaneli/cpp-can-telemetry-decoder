@@ -5,52 +5,10 @@
 
 #include "can_frame.hpp"
 #include "can_validation.hpp"
-#include "bit_utils.hpp"
 #include "circular_buffer.hpp"
+#include "telemetry_decoder.hpp"
 
-void decode_analog_inputs(const CanFrame& frame) {
-    if (frame.id != 0x100) {
-        return;
-    }
-
-    if (frame.dlc < 8) {
-        std::cout << "Cannot decode analog inputs: invalid DLC" << std::endl;
-        return;
-    }
-
-    std::uint16_t ain1 = pack_u16(frame.data[0], frame.data[1]);
-    std::uint16_t ain2 = pack_u16(frame.data[2], frame.data[3]);
-    std::uint16_t ain3 = pack_u16(frame.data[4], frame.data[5]);
-
-    std::uint8_t status = frame.data[6];
-    std::uint8_t counter = frame.data[7];
-
-    std::cout << "Decoded analog inputs:" << std::endl;
-
-    std::cout << "AIN1: " << ain1
-              << " decimal, 0x" << std::hex << ain1 << std::dec
-              << std::endl;
-
-    std::cout << "AIN2: " << ain2
-              << " decimal, 0x" << std::hex << ain2 << std::dec
-              << std::endl;
-
-    std::cout << "AIN3: " << ain3
-              << " decimal, 0x" << std::hex << ain3 << std::dec
-              << std::endl;
-
-    std::cout << "Status byte: 0x"
-              << std::hex
-              << static_cast<int>(status)
-              << std::dec
-              << std::endl;
-
-    std::cout << "Counter: "
-              << static_cast<int>(counter)
-              << std::endl;
-}
-
-void process_frame(const CanFrame& frame) {
+void process_frame(const CanFrame& frame, const TelemetryDecoder& decoder) {
     print_frame(frame);
 
     bool has_fault = false;
@@ -67,10 +25,7 @@ void process_frame(const CanFrame& frame) {
 
     if (!has_fault) {
         std::cout << "Frame status: OK" << std::endl;
-
-        if (frame.id == 0x100) {
-            decode_analog_inputs(frame);
-        }
+        decoder.decode(frame);
     }
 }
 
@@ -100,14 +55,14 @@ void load_frames_into_buffer(const std::vector<CanFrame>& log, CircularBuffer& r
     std::cout << std::endl;
 }
 
-void process_buffered_frames(CircularBuffer& rx_buffer) {
+void process_buffered_frames(CircularBuffer& rx_buffer, const TelemetryDecoder& decoder) {
     std::cout << "Processing buffered CAN frames:" << std::endl;
     std::cout << "===============================" << std::endl;
 
     CanFrame frame{};
 
     while (rx_buffer.pop(frame)) {
-        process_frame(frame);
+        process_frame(frame, decoder);
         std::cout << std::endl;
     }
 
@@ -126,9 +81,10 @@ int main() {
     };
 
     CircularBuffer rx_buffer;
+    TelemetryDecoder decoder;
 
     load_frames_into_buffer(simulated_log, rx_buffer);
-    process_buffered_frames(rx_buffer);
+    process_buffered_frames(rx_buffer, decoder);
 
     return 0;
 }
