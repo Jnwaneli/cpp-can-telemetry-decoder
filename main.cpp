@@ -8,7 +8,7 @@
 #include "circular_buffer.hpp"
 #include "telemetry_decoder.hpp"
 
-void process_frame(const CanFrame& frame, const TelemetryDecoder& decoder) {
+void process_frame(const CanFrame& frame, TelemetryDecoder& decoder) {
     print_frame(frame);
 
     bool has_fault = false;
@@ -55,7 +55,7 @@ void load_frames_into_buffer(const std::vector<CanFrame>& log, CircularBuffer& r
     std::cout << std::endl;
 }
 
-void process_buffered_frames(CircularBuffer& rx_buffer, const TelemetryDecoder& decoder) {
+void process_buffered_frames(CircularBuffer& rx_buffer, TelemetryDecoder& decoder) {
     std::cout << "Processing buffered CAN frames:" << std::endl;
     std::cout << "===============================" << std::endl;
 
@@ -85,6 +85,10 @@ int main() {
 
     load_frames_into_buffer(simulated_log, rx_buffer);
     process_buffered_frames(rx_buffer, decoder);
+
+    std::cout << "Decoder frames seen: "
+              << decoder.frames_seen()
+              << std::endl;
 
     return 0;
 }

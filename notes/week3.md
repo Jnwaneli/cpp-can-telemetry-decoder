@@ -231,3 +231,271 @@ That is exactly how a stack works.
 ```text
 A class groups related data and functions together. In this project, TelemetryDecoder owns the decoding logic, while main.cpp only controls the program flow. Public functions form the interface, and private functions hide internal implementation details.
 ```
+---
+
+# Day 2 — Constructors and Queue Using Stacks
+
+## Main goals
+
+```text
+Learn constructors.
+Add a constructor to TelemetryDecoder.
+Initialize internal decoder state.
+Understand FIFO and LIFO.
+Solve Implement Queue using Stacks.
+```
+
+---
+
+## What is a constructor?
+
+A constructor is a special function that runs automatically when an object is created.
+
+Example:
+
+```cpp
+class TelemetryDecoder {
+public:
+    TelemetryDecoder();
+};
+```
+
+Implementation:
+
+```cpp
+TelemetryDecoder::TelemetryDecoder()
+    : frames_seen_(0) {
+}
+```
+
+Simple explanation:
+
+```text
+A constructor sets up an object when it is created.
+```
+
+---
+
+## Why use a constructor?
+
+A constructor is used to initialize internal state.
+
+Example:
+
+```cpp
+std::size_t frames_seen_;
+```
+
+This variable should start at zero.
+
+The constructor does that:
+
+```cpp
+TelemetryDecoder::TelemetryDecoder()
+    : frames_seen_(0) {
+}
+```
+
+Simple explanation:
+
+```text
+The constructor makes sure the object starts in a valid state.
+```
+
+---
+
+## What is internal state?
+
+Internal state means data stored inside an object.
+
+For `TelemetryDecoder`, an example is:
+
+```cpp
+std::size_t frames_seen_;
+```
+
+This tracks how many frames the decoder has seen.
+
+It is private because outside code should not directly modify it.
+
+---
+
+## Why make `frames_seen_` private?
+
+`frames_seen_` belongs to the decoder.
+
+Outside code should not be able to randomly change it.
+
+Instead, outside code can read it through:
+
+```cpp
+std::size_t frames_seen() const;
+```
+
+Simple explanation:
+
+```text
+Private data protects the object from being changed incorrectly.
+```
+
+---
+
+## What is FIFO?
+
+FIFO means:
+
+```text
+First In, First Out
+```
+
+A queue uses FIFO behavior.
+
+Example:
+
+```text
+1 enters first
+2 enters second
+3 enters third
+
+Removal order:
+1, then 2, then 3
+```
+
+Real examples:
+
+```text
+line at a store
+UART receive queue
+CAN receive queue
+printer queue
+```
+
+---
+
+## What is LIFO?
+
+LIFO means:
+
+```text
+Last In, First Out
+```
+
+A stack uses LIFO behavior.
+
+Example:
+
+```text
+1 pushed first
+2 pushed second
+3 pushed third
+
+Removal order:
+3, then 2, then 1
+```
+
+Real examples:
+
+```text
+stack of plates
+function call stack
+undo history
+Valid Parentheses
+```
+
+---
+
+## Queue using two stacks
+
+A queue is FIFO.
+
+A stack is LIFO.
+
+To build a queue using stacks, use two stacks:
+
+```text
+input stack = receives pushed values
+output stack = provides values in queue order
+```
+
+When `output` is empty, move everything from `input` to `output`.
+
+This reverses the order.
+
+Example:
+
+```text
+input stack has:
+1, 2, 3
+
+Move to output stack.
+
+output top becomes:
+1
+```
+
+Now the oldest value comes out first.
+
+---
+
+## Why does reversing help?
+
+A stack naturally gives the newest item first.
+
+But a queue needs the oldest item first.
+
+Moving items from one stack to another reverses the order.
+
+That makes the oldest item become the top of the output stack.
+
+Simple explanation:
+
+```text
+Two LIFO reversals can produce FIFO behavior.
+```
+
+---
+
+## Why does a decoder need routing logic?
+
+The decoder needs routing logic because different CAN IDs mean different payload formats.
+
+Example:
+
+```text
+0x100 = analog inputs
+0x101 = battery and temperature
+0x102 = status flags
+0x200 = vehicle data
+```
+
+The decoder should inspect the CAN ID and send the frame to the correct helper function.
+
+Example:
+
+```cpp
+void TelemetryDecoder::decode(const CanFrame& frame) {
+    switch (frame.id) {
+        case 0x100:
+            decode_0x100(frame);
+            break;
+
+        default:
+            std::cout << "Unsupported ID" << std::endl;
+            break;
+    }
+}
+```
+
+Simple explanation:
+
+```text
+Routing logic lets one public decode() function decide which private decoder helper should handle each CAN ID.
+```
+
+---
+
+## Day 2 main interview idea
+
+```text
+A constructor initializes an object when it is created. In this project, TelemetryDecoder uses a constructor to initialize internal state like frames_seen_. The public decode() function uses routing logic to choose the correct private helper based on CAN ID.
+```

@@ -2643,3 +2643,214 @@ Reference answer:
 ```text
 Circular buffers are common in embedded systems because they provide fixed-size, predictable storage for streaming data like UART bytes or CAN frames. They use head and tail indexes to avoid moving memory and wrap around with modulo arithmetic.
 ```
+---
+
+# Week 3 Day 2 — Constructors and Queue Using Stacks
+
+## What is a constructor?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A constructor is a special function that runs automatically when an object is created.
+
+It is usually used to initialize the object.
+
+Example:
+
+```cpp
+TelemetryDecoder::TelemetryDecoder()
+    : frames_seen_(0) {
+}
+```
+
+Simple version:
+
+```text
+A constructor sets up an object when it is created.
+```
+
+---
+
+## Why use a constructor?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A constructor is used to initialize internal state.
+
+Example:
+
+```cpp
+std::size_t frames_seen_;
+```
+
+This should start at zero.
+
+The constructor makes sure that happens.
+
+Simple version:
+
+```text
+A constructor makes sure an object starts in a valid state.
+```
+
+---
+
+## What is FIFO?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+FIFO means First In, First Out.
+
+A queue uses FIFO behavior.
+
+Example:
+
+```text
+1 enters first
+2 enters second
+3 enters third
+
+Removal order:
+1, 2, 3
+```
+
+Simple version:
+
+```text
+FIFO means the first item added is the first item removed.
+```
+
+---
+
+## What is LIFO?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+LIFO means Last In, First Out.
+
+A stack uses LIFO behavior.
+
+Example:
+
+```text
+1 pushed first
+2 pushed second
+3 pushed third
+
+Removal order:
+3, 2, 1
+```
+
+Simple version:
+
+```text
+LIFO means the last item added is the first item removed.
+```
+
+---
+
+## How can two stacks implement a queue?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Use one stack for input and one stack for output.
+
+```text
+input stack receives new values
+output stack provides values in queue order
+```
+
+When output is empty, move all values from input to output.
+
+This reverses the order, making the oldest value appear on top of output.
+
+Simple version:
+
+```text
+Moving items from one stack to another reverses them, which lets two stacks create FIFO queue behavior.
+```
+
+---
+
+## Why does a decoder need routing logic?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A decoder needs routing logic because different CAN IDs have different payload formats.
+
+Example:
+
+```text
+0x100 = analog inputs
+0x101 = battery and temperature
+0x102 = status flags
+0x200 = vehicle data
+```
+
+The public `decode()` function checks the CAN ID and calls the correct private helper.
+
+Simple version:
+
+```text
+Routing logic lets the decoder choose the correct decoding function based on the CAN ID.
+```

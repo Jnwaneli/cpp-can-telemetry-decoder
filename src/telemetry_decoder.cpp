@@ -5,14 +5,20 @@
 #include <iomanip>
 #include <iostream>
 
-void TelemetryDecoder::decode(const CanFrame& frame) const {
+TelemetryDecoder::TelemetryDecoder()
+    : frames_seen_(0) {
+}
+
+void TelemetryDecoder::decode(const CanFrame& frame) {
+    frames_seen_++;
+
     switch (frame.id) {
         case 0x100:
             decode_0x100(frame);
             break;
 
         default:
-            std::cout << "No decoder implemented for CAN ID 0x"
+            std::cout << "Unsupported ID 0x"
                       << std::hex
                       << frame.id
                       << std::dec
@@ -21,7 +27,11 @@ void TelemetryDecoder::decode(const CanFrame& frame) const {
     }
 }
 
-void TelemetryDecoder::decode_0x100(const CanFrame& frame) const {
+std::size_t TelemetryDecoder::frames_seen() const {
+    return frames_seen_;
+}
+
+void TelemetryDecoder::decode_0x100(const CanFrame& frame) {
     if (frame.dlc < 8) {
         std::cout << "Cannot decode 0x100: invalid DLC" << std::endl;
         return;
