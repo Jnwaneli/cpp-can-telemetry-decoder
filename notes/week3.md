@@ -499,3 +499,270 @@ Routing logic lets one public decode() function decide which private decoder hel
 ```text
 A constructor initializes an object when it is created. In this project, TelemetryDecoder uses a constructor to initialize internal state like frames_seen_. The public decode() function uses routing logic to choose the correct private helper based on CAN ID.
 ```
+---
+
+# Day 3 — std::array vs Raw Array
+
+## Main goals
+
+```text
+Compare raw arrays with std::array.
+Understand why embedded structs often use raw arrays.
+Understand what std::array adds in C++.
+Keep CanFrame payload as uint8_t data[8].
+Solve Implement Stack using Queues.
+```
+
+---
+
+## Raw array
+
+A raw array is the C-style fixed-size array.
+
+Example:
+
+```cpp
+std::uint8_t data[8];
+```
+
+This creates 8 bytes of storage.
+
+For a CAN frame, this makes sense because a classic CAN payload can hold up to 8 data bytes.
+
+Simple explanation:
+
+```text
+A raw array is a fixed-size block of elements.
+```
+
+---
+
+## std::array
+
+`std::array` is a C++ fixed-size array wrapper.
+
+Example:
+
+```cpp
+std::array<std::uint8_t, 8> data;
+```
+
+It still has fixed size, but it gives extra C++ features.
+
+Useful features:
+
+```text
+.size()
+.at()
+.begin()
+.end()
+works better with standard algorithms
+```
+
+Simple explanation:
+
+```text
+std::array is a safer C++ wrapper around a fixed-size array.
+```
+
+---
+
+## Raw array vs std::array
+
+Raw array:
+
+```text
+C-style
+common in embedded code
+simple memory layout
+no .size() member function
+can decay to pointer
+```
+
+`std::array`:
+
+```text
+C++ style
+fixed-size
+has .size()
+supports iterators
+works well with STL
+does not decay to pointer as easily
+```
+
+---
+
+## Why are fixed-size arrays useful in embedded systems?
+
+Fixed-size arrays are useful because embedded systems usually have limited memory and need predictable behavior.
+
+Benefits:
+
+```text
+fixed memory usage
+no heap allocation
+predictable size
+simple layout
+good for hardware data buffers
+good for protocols like CAN, UART, SPI, and I2C
+```
+
+Simple explanation:
+
+```text
+Fixed-size arrays are useful in embedded systems because they avoid dynamic memory and make memory usage predictable.
+```
+
+---
+
+## Why is `uint8_t data[8]` useful for CAN?
+
+CAN data is byte-based.
+
+Classic CAN payloads are up to 8 bytes.
+
+So this struct:
+
+```cpp
+struct CanFrame {
+    std::uint32_t id;
+    std::uint8_t dlc;
+    std::uint8_t data[8];
+};
+```
+
+matches the idea of a real CAN frame.
+
+Simple explanation:
+
+```text
+uint8_t data[8] clearly represents the 8-byte payload of a classic CAN frame.
+```
+
+---
+
+## What does std::array add?
+
+`std::array` adds useful C++ behavior while still keeping fixed size.
+
+Example:
+
+```cpp
+std::array<std::uint8_t, 8> data = {
+    0x00, 0x08, 0x10, 0x00, 0xFF, 0x0A, 0x01, 0x05
+};
+
+std::cout << data.size() << std::endl;
+```
+
+A raw array does not have:
+
+```cpp
+data.size()
+```
+
+For a raw array, size is usually calculated with:
+
+```cpp
+sizeof(data) / sizeof(data[0])
+```
+
+---
+
+## Why keep `uint8_t data[8]` in `CanFrame`?
+
+We keep `uint8_t data[8]` because it looks closer to embedded firmware and CAN driver code.
+
+Many embedded examples use raw byte arrays for protocol payloads.
+
+Simple explanation:
+
+```text
+I keep uint8_t data[8] in CanFrame because it directly represents an 8-byte CAN payload and matches embedded firmware style.
+```
+
+---
+
+## Stack using Queues
+
+A stack uses LIFO behavior.
+
+```text
+LIFO = Last In, First Out
+```
+
+A queue uses FIFO behavior.
+
+```text
+FIFO = First In, First Out
+```
+
+The problem asks us to build stack behavior using queue operations.
+
+---
+
+## Main idea for Stack using Queues
+
+Use one queue.
+
+When pushing a new value:
+
+```text
+push the new value
+rotate all older values behind it
+```
+
+Example:
+
+```text
+push 1:
+queue = 1
+
+push 2:
+queue before rotation = 1, 2
+queue after rotation = 2, 1
+
+push 3:
+queue before rotation = 2, 1, 3
+queue after rotation = 3, 2, 1
+```
+
+Now the newest item is always at the front.
+
+So:
+
+```text
+pop removes the newest item
+top returns the newest item
+```
+
+That creates stack behavior.
+
+---
+
+## What did Stack using Queues teach me?
+
+It taught that data structures are mostly about access order.
+
+A stack and a queue can store similar data, but they remove data in different orders.
+
+```text
+stack = newest item first
+queue = oldest item first
+```
+
+To make a queue act like a stack, I had to rotate the queue so the newest item becomes the first item removed.
+
+Simple explanation:
+
+```text
+Stack using Queues taught me that I can change access behavior by rearranging the order of stored elements.
+```
+
+---
+
+## Day 3 main interview idea
+
+```text
+Fixed-size arrays are useful in embedded systems because they provide predictable memory usage. std::array adds safer C++ features like .size(), but uint8_t data[8] is still common for embedded protocol payloads like CAN frames because it directly represents a fixed 8-byte message buffer.
+```

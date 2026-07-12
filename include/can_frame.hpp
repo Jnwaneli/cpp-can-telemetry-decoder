@@ -1,6 +1,5 @@
 #pragma once
 
-#include <array>
 #include <cstdint>
 #include <iomanip>
 #include <iostream>
@@ -8,7 +7,7 @@
 struct CanFrame {
     std::uint32_t id;
     std::uint8_t dlc;
-    std::array<std::uint8_t, 8> data;
+    std::uint8_t data[8];
 };
 
 inline void print_frame(const CanFrame& frame) {
@@ -24,7 +23,7 @@ inline void print_frame(const CanFrame& frame) {
 
     std::cout << "Data: ";
 
-    for (int i = 0; i < frame.dlc; i++) {
+    for (int i = 0; i < frame.dlc && i < 8; i++) {
         std::cout << "0x"
                   << std::hex
                   << std::setw(2)

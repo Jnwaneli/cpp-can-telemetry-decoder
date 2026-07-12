@@ -2854,3 +2854,311 @@ Simple version:
 ```text
 Routing logic lets the decoder choose the correct decoding function based on the CAN ID.
 ```
+---
+
+# Week 3 Day 3 — std::array vs Raw Array
+
+## What is a raw array?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A raw array is a C-style fixed-size array.
+
+Example:
+
+```cpp
+std::uint8_t data[8];
+```
+
+This creates 8 elements of type `std::uint8_t`.
+
+Simple version:
+
+```text
+A raw array is a fixed-size block of elements using C-style syntax.
+```
+
+---
+
+## What is std::array?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`std::array` is a C++ fixed-size array wrapper.
+
+Example:
+
+```cpp
+std::array<std::uint8_t, 8> data;
+```
+
+It keeps fixed-size storage but adds C++ features like `.size()`, `.at()`, and iterators.
+
+Simple version:
+
+```text
+std::array is a safer C++ wrapper around a fixed-size array.
+```
+
+---
+
+## Why are fixed-size arrays useful in embedded systems?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Fixed-size arrays are useful because embedded systems need predictable memory usage.
+
+Benefits:
+
+```text
+fixed memory size
+no heap allocation
+simple layout
+predictable behavior
+good for hardware buffers
+good for protocol payloads
+```
+
+Simple version:
+
+```text
+Fixed-size arrays are useful in embedded systems because they avoid dynamic memory and make memory usage predictable.
+```
+
+---
+
+## What does std::array add?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`std::array` adds C++ convenience and safety while keeping fixed size.
+
+It provides:
+
+```text
+.size()
+.at()
+.begin()
+.end()
+better STL compatibility
+```
+
+Simple version:
+
+```text
+std::array gives fixed-size array storage with useful C++ member functions.
+```
+
+---
+
+## Why keep uint8_t data[8] in CanFrame?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+We keep `uint8_t data[8]` because it directly represents the 8-byte payload of a classic CAN frame.
+
+It also looks closer to embedded firmware and CAN driver code.
+
+Example:
+
+```cpp
+struct CanFrame {
+    std::uint32_t id;
+    std::uint8_t dlc;
+    std::uint8_t data[8];
+};
+```
+
+Simple version:
+
+```text
+uint8_t data[8] clearly represents a fixed 8-byte CAN payload and matches embedded firmware style.
+```
+
+---
+
+## Raw array vs std::array?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A raw array is C-style and common in embedded code.
+
+`std::array` is C++ style and adds useful features.
+
+Raw array:
+
+```text
+simple
+common in firmware structs
+no .size()
+can decay to pointer
+```
+
+`std::array`:
+
+```text
+safer C++ wrapper
+has .size()
+supports iterators
+works with STL
+still fixed-size
+```
+
+Simple version:
+
+```text
+Raw arrays are closer to C/firmware style, while std::array is safer and more convenient modern C++.
+```
+
+---
+
+## What is the difference between stack and queue access order?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A stack uses LIFO.
+
+```text
+Last In, First Out
+```
+
+A queue uses FIFO.
+
+```text
+First In, First Out
+```
+
+Simple version:
+
+```text
+A stack removes the newest item first, while a queue removes the oldest item first.
+```
+
+---
+
+## How can queues implement a stack?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Use a queue and rotate it after each push.
+
+When a new value is pushed, move all older values behind it.
+
+Example:
+
+```text
+push 1:
+queue = 1
+
+push 2:
+queue = 2, 1
+
+push 3:
+queue = 3, 2, 1
+```
+
+Now the newest value is always at the front.
+
+Simple version:
+
+```text
+Queues can implement a stack by rotating elements so the newest item is always removed first.
+```
+
+---
+
+## Week 3 Day 3 Core Interview Summary
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Fixed-size arrays are useful in embedded systems because they provide predictable memory usage. `std::array` adds safer C++ features like `.size()`, but `uint8_t data[8]` is still common for embedded protocol payloads like CAN frames because it directly represents a fixed 8-byte message buffer. Stack using Queues reinforced that data structures are defined by access order: stack is LIFO and queue is FIFO.

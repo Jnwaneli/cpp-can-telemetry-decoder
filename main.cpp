@@ -1,12 +1,47 @@
-#include <iostream>
-#include <vector>
+#include <array>
 #include <cstdint>
 #include <iomanip>
+#include <iostream>
+#include <vector>
 
 #include "can_frame.hpp"
 #include "can_validation.hpp"
 #include "circular_buffer.hpp"
 #include "telemetry_decoder.hpp"
+
+void arrayExperiment() {
+    std::cout << "Array experiment:" << std::endl;
+
+    std::uint8_t raw_data[8] = {
+        0x00, 0x08, 0x10, 0x00, 0xFF, 0x0A, 0x01, 0x05
+    };
+
+    std::array<std::uint8_t, 8> cpp_data = {
+        0x00, 0x08, 0x10, 0x00, 0xFF, 0x0A, 0x01, 0x05
+    };
+
+    std::cout << "Raw array first byte: 0x"
+              << std::hex
+              << static_cast<int>(raw_data[0])
+              << std::dec
+              << std::endl;
+
+    std::cout << "std::array first byte: 0x"
+              << std::hex
+              << static_cast<int>(cpp_data[0])
+              << std::dec
+              << std::endl;
+
+    std::cout << "Raw array size using sizeof: "
+              << sizeof(raw_data) / sizeof(raw_data[0])
+              << std::endl;
+
+    std::cout << "std::array size using .size(): "
+              << cpp_data.size()
+              << std::endl;
+
+    std::cout << std::endl;
+}
 
 void process_frame(const CanFrame& frame, TelemetryDecoder& decoder) {
     print_frame(frame);
@@ -72,6 +107,8 @@ void process_buffered_frames(CircularBuffer& rx_buffer, TelemetryDecoder& decode
 }
 
 int main() {
+    arrayExperiment();
+
     std::vector<CanFrame> simulated_log = {
         {0x100, 8, {0x00, 0x08, 0x10, 0x00, 0xFF, 0x0A, 0x01, 0x05}},
         {0x101, 8, {0x88, 0x13, 0x2C, 0x01, 0x00, 0x00, 0x00, 0x00}},
