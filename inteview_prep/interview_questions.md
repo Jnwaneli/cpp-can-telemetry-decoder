@@ -3162,3 +3162,300 @@ My answer:
 Reference answer:
 
 Fixed-size arrays are useful in embedded systems because they provide predictable memory usage. `std::array` adds safer C++ features like `.size()`, but `uint8_t data[8]` is still common for embedded protocol payloads like CAN frames because it directly represents a fixed 8-byte message buffer. Stack using Queues reinforced that data structures are defined by access order: stack is LIFO and queue is FIFO.
+---
+
+# Week 3 Day 4 — Min Stack and Output Formatting
+
+## What are common stack use cases?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Stacks are useful when the most recent item needs to be handled first.
+
+Common use cases:
+
+```text
+parsing
+undo history
+function calls
+recursion
+monotonic stack problems
+nested structures
+expression evaluation
+backtracking
+```
+
+Simple version:
+
+```text
+Stacks are useful for problems where the last thing added should be handled first.
+```
+
+---
+
+## Why do parentheses/parsing problems use stacks?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Parsing problems use stacks because nested structures must close in reverse order.
+
+Example:
+
+```text
+({[]})
+```
+
+The `[` opens last, so it must close first.
+
+Simple version:
+
+```text
+Stacks work for parsing because the most recent unfinished item must be completed first.
+```
+
+---
+
+## How does the function call stack work?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+When a function is called, it is placed on the call stack.
+
+When it finishes, it is removed from the stack and control returns to the previous function.
+
+Simple version:
+
+```text
+The most recently called function finishes first, so function calls follow stack behavior.
+```
+
+---
+
+## What is a monotonic stack?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A monotonic stack keeps values in increasing or decreasing order.
+
+It is useful for finding next greater or next smaller values.
+
+Example problem:
+
+```text
+Daily Temperatures
+```
+
+Simple version:
+
+```text
+A monotonic stack stores values in a controlled order to answer next greater or next smaller questions efficiently.
+```
+
+---
+
+## What is Min Stack's trick?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Min Stack uses two stacks.
+
+```text
+values stack = stores all values
+mins stack = stores minimum values
+```
+
+The minimum stack tracks the current minimum so `getMin()` can return the minimum in O(1).
+
+Simple version:
+
+```text
+Min Stack avoids scanning by keeping a second stack of minimum values.
+```
+
+---
+
+## Why does Min Stack use <= when pushing to the min stack?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+It uses `<=` to handle duplicate minimum values correctly.
+
+Example:
+
+```text
+push 2
+push 2
+pop
+```
+
+Both `2`s are minimum values, so both should be tracked.
+
+Simple version:
+
+```text
+Using <= makes sure duplicate minimum values are stored correctly.
+```
+
+---
+
+## What is the time complexity of Min Stack?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+```text
+push: O(1)
+pop: O(1)
+top: O(1)
+getMin: O(1)
+```
+
+The goal is for every operation to be constant time.
+
+---
+
+## Why does formatting matter for debugging tools?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Formatting matters because debugging output should be easy to read quickly.
+
+Good output shows:
+
+```text
+frame ID
+DLC
+payload
+decoded values
+faults
+result
+```
+
+Simple version:
+
+```text
+Clear formatting helps developers find problems faster.
+```
+
+---
+
+## How would you explain your CAN decoder output in an interview?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+My decoder takes simulated CAN frames, validates the CAN ID and DLC, routes known messages to decoder functions, and formats the result like a diagnostic log.
+
+For ID `0x100`, it decodes three analog raw values, a status byte, and a counter.
+
+Simple version:
+
+```text
+The formatted output makes it easy to inspect frame contents, decoded sensor values, and fault conditions.
+```
+
+---
+
+## Week 3 Day 4 Core Interview Summary
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Stacks are useful when the most recent item must be handled first, such as parsing, undo history, function calls, recursion, and monotonic stack problems. Min Stack uses an extra stack to track current minimum values so `getMin()` runs in O(1). For the CAN decoder project, clean output formatting makes the tool easier to use as a debugging or diagnostic utility.    

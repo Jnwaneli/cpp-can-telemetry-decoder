@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <iomanip>
 #include <iostream>
+#include <string>
 #include <vector>
 
 #include "can_frame.hpp"
@@ -43,25 +44,65 @@ void arrayExperiment() {
     std::cout << std::endl;
 }
 
-void process_frame(const CanFrame& frame, TelemetryDecoder& decoder) {
-    print_frame(frame);
+void print_payload(const CanFrame& frame) {
+    std::cout << "Payload: ";
 
-    bool has_fault = false;
+    for (int i = 0; i < frame.dlc && i < 8; i++) {
+        std::cout << "0x"
+                  << std::hex
+                  << std::setw(2)
+                  << std::setfill('0')
+                  << static_cast<int>(frame.data[i])
+                  << " ";
+    }
+
+    std::cout << std::dec
+              << std::setfill(' ')
+              << std::endl;
+}
+
+void print_frame_header(const CanFrame& frame) {
+    std::cout << "Frame ID: 0x"
+              << std::hex
+              << frame.id
+              << std::dec
+              << std::endl;
+
+    std::cout << "DLC: "
+              << static_cast<int>(frame.dlc)
+              << std::endl;
+
+    print_payload(frame);
+}
+
+void process_frame(const CanFrame& frame, TelemetryDecoder& decoder) {
+    std::cout << "------------------------------" << std::endl;
+
+    print_frame_header(frame);
+
+    std::vector<std::string> faults;
 
     if (!is_known_id(frame.id)) {
-        std::cout << "FAULT: Unknown CAN ID" << std::endl;
-        has_fault = true;
+        faults.push_back("Unknown CAN ID");
     }
 
     if (!has_valid_dlc(frame)) {
-        std::cout << "FAULT: Invalid DLC" << std::endl;
-        has_fault = true;
+        faults.push_back("Invalid DLC");
     }
 
-    if (!has_fault) {
-        std::cout << "Frame status: OK" << std::endl;
-        decoder.decode(frame);
+    if (!faults.empty()) {
+        std::cout << "Result: FAULT" << std::endl;
+
+        for (const std::string& fault : faults) {
+            std::cout << "Fault: " << fault << std::endl;
+        }
+
+        return;
     }
+
+    decoder.decode(frame);
+
+    std::cout << "Result: OK" << std::endl;
 }
 
 void load_frames_into_buffer(const std::vector<CanFrame>& log, CircularBuffer& rx_buffer) {
@@ -92,14 +133,14 @@ void load_frames_into_buffer(const std::vector<CanFrame>& log, CircularBuffer& r
 
 void process_buffered_frames(CircularBuffer& rx_buffer, TelemetryDecoder& decoder) {
     std::cout << "Processing buffered CAN frames:" << std::endl;
-    std::cout << "===============================" << std::endl;
 
     CanFrame frame{};
 
     while (rx_buffer.pop(frame)) {
         process_frame(frame, decoder);
-        std::cout << std::endl;
     }
+
+    std::cout << "------------------------------" << std::endl;
 
     if (rx_buffer.is_empty()) {
         std::cout << "RX buffer is now empty." << std::endl;

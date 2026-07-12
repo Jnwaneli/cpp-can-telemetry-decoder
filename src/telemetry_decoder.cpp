@@ -18,11 +18,7 @@ void TelemetryDecoder::decode(const CanFrame& frame) {
             break;
 
         default:
-            std::cout << "Unsupported ID 0x"
-                      << std::hex
-                      << frame.id
-                      << std::dec
-                      << std::endl;
+            std::cout << "Type: Known frame, decoder not implemented yet" << std::endl;
             break;
     }
 }
@@ -33,7 +29,8 @@ std::size_t TelemetryDecoder::frames_seen() const {
 
 void TelemetryDecoder::decode_0x100(const CanFrame& frame) {
     if (frame.dlc < 8) {
-        std::cout << "Cannot decode 0x100: invalid DLC" << std::endl;
+        std::cout << "Type: Analog Inputs" << std::endl;
+        std::cout << "Result: FAULT - Invalid DLC for 0x100 decoder" << std::endl;
         return;
     }
 
@@ -44,24 +41,27 @@ void TelemetryDecoder::decode_0x100(const CanFrame& frame) {
     std::uint8_t status = frame.data[6];
     std::uint8_t counter = frame.data[7];
 
-    std::cout << "Decoded 0x100 analog inputs:" << std::endl;
+    std::cout << "Type: Analog Inputs" << std::endl;
 
-    std::cout << "AIN1: " << ain1
-              << " decimal, 0x" << std::hex << ain1 << std::dec
+    std::cout << "AIN1_RAW: "
+              << ain1
               << std::endl;
 
-    std::cout << "AIN2: " << ain2
-              << " decimal, 0x" << std::hex << ain2 << std::dec
+    std::cout << "AIN2_RAW: "
+              << ain2
               << std::endl;
 
-    std::cout << "AIN3: " << ain3
-              << " decimal, 0x" << std::hex << ain3 << std::dec
+    std::cout << "AIN3_RAW: "
+              << ain3
               << std::endl;
 
-    std::cout << "Status byte: 0x"
+    std::cout << "Status: 0x"
               << std::hex
+              << std::setw(2)
+              << std::setfill('0')
               << static_cast<int>(status)
               << std::dec
+              << std::setfill(' ')
               << std::endl;
 
     std::cout << "Counter: "

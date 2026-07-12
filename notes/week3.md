@@ -766,3 +766,239 @@ Stack using Queues taught me that I can change access behavior by rearranging th
 ```text
 Fixed-size arrays are useful in embedded systems because they provide predictable memory usage. std::array adds safer C++ features like .size(), but uint8_t data[8] is still common for embedded protocol payloads like CAN frames because it directly represents a fixed 8-byte message buffer.
 ```
+---
+
+# Day 4 — Min Stack and Output Formatting
+
+## Main goals
+
+```text
+Study common stack use cases.
+Solve Min Stack.
+Improve CAN decoder output formatting.
+Make project output easier to read like a debugging tool.
+```
+
+---
+
+## Stack use cases
+
+A stack uses LIFO behavior.
+
+```text
+LIFO = Last In, First Out
+```
+
+Common stack use cases:
+
+```text
+parsing
+undo history
+function calls
+monotonic stack
+nested structures
+backtracking
+expression evaluation
+```
+
+---
+
+## Stack use case: parsing
+
+Stacks are useful for parsing nested structures.
+
+Example:
+
+```text
+({[]})
+```
+
+The most recent opening bracket must be closed first.
+
+This is why Valid Parentheses uses a stack.
+
+---
+
+## Stack use case: undo history
+
+Undo history works like a stack.
+
+The most recent action is the first action undone.
+
+Example:
+
+```text
+type word
+delete word
+paste text
+
+undo removes paste text first
+```
+
+---
+
+## Stack use case: function calls
+
+The function call stack also uses stack behavior.
+
+When a function calls another function, the new function goes on top of the call stack.
+
+When that function finishes, it is removed from the stack and control returns to the previous function.
+
+This is why recursion uses stack memory.
+
+---
+
+## Stack use case: monotonic stack
+
+A monotonic stack keeps values in increasing or decreasing order.
+
+It is useful for problems where I need to find the next greater or smaller value.
+
+Example problem:
+
+```text
+Daily Temperatures
+```
+
+---
+
+## Stack use case: nested structures
+
+Stacks are useful when the most recent unfinished item must be handled first.
+
+Examples:
+
+```text
+parentheses
+HTML tags
+function calls
+nested expressions
+compiler parsing
+```
+
+---
+
+## Why does formatting matter for debugging tools?
+
+Formatting matters because debugging output needs to be readable quickly.
+
+A good debugging log should make it easy to see:
+
+```text
+which frame was received
+what type of frame it is
+what raw values were decoded
+whether the frame passed validation
+what fault occurred if something failed
+```
+
+Bad formatting makes debugging slower because the developer has to mentally organize messy output.
+
+Simple explanation:
+
+```text
+Formatting matters because clear logs help me find problems faster.
+```
+
+---
+
+## Improved CAN decoder output
+
+Example output:
+
+```text
+Frame ID: 0x100
+DLC: 8
+Payload: 0x00 0x08 0x10 0x00 0xff 0x0a 0x01 0x05
+Type: Analog Inputs
+AIN1_RAW: 2048
+AIN2_RAW: 16
+AIN3_RAW: 2815
+Status: 0x01
+Counter: 5
+Result: OK
+```
+
+This is better than random print statements because it looks like a structured diagnostic report.
+
+---
+
+## What is Min Stack's trick?
+
+Min Stack needs to support:
+
+```text
+push
+pop
+top
+getMin
+```
+
+efficiently.
+
+The trick is to use two stacks:
+
+```text
+values stack = stores all values
+mins stack = stores the minimum values
+```
+
+The minimum stack tracks the minimum value so far.
+
+This allows `getMin()` to run in:
+
+```text
+O(1)
+```
+
+instead of scanning the whole stack.
+
+---
+
+## Why use <= when pushing to the min stack?
+
+Use `<=` to handle duplicate minimum values.
+
+Example:
+
+```text
+push 2
+push 2
+pop
+```
+
+If both `2`s are minimum values, the min stack needs to track both of them.
+
+Otherwise, popping one duplicate could incorrectly remove the minimum too early.
+
+---
+
+## Min Stack time complexity
+
+```text
+push: O(1)
+pop: O(1)
+top: O(1)
+getMin: O(1)
+```
+
+The whole point is that `getMin()` should be constant time.
+
+---
+
+## How would I explain this project output in an interview?
+
+I would say:
+
+```text
+My decoder takes simulated CAN frames, validates the CAN ID and DLC, routes known messages to decoder functions, and formats the result like a diagnostic log. For ID 0x100, it decodes three analog raw values, a status byte, and a counter. The formatted output makes it easier to debug frame contents and fault conditions.
+```
+
+---
+
+## Day 4 main interview idea
+
+```text
+Clear formatting makes debugging tools easier to use. Min Stack uses an extra stack to track the current minimum, which allows getMin() to run in O(1) time instead of scanning the whole stack.
+```
