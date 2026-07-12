@@ -3458,4 +3458,337 @@ My answer:
 
 Reference answer:
 
-Stacks are useful when the most recent item must be handled first, such as parsing, undo history, function calls, recursion, and monotonic stack problems. Min Stack uses an extra stack to track current minimum values so `getMin()` runs in O(1). For the CAN decoder project, clean output formatting makes the tool easier to use as a debugging or diagnostic utility.    
+Stacks are useful when the most recent item must be handled first, such as parsing, undo history, function calls, recursion, and monotonic stack problems. Min Stack uses an extra stack to track current minimum values so `getMin()` runs in O(1). For the CAN decoder project, clean output formatting makes the tool easier to use as a debugging or diagnostic utility.
+---
+
+# Week 3 Day 5 — Decode 0x101 and Monotonic Stack
+
+## What does CAN ID 0x101 represent in this project?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+CAN ID `0x101` represents battery and temperature data.
+
+Payload format:
+
+```text
+Byte 0-1: battery_mV
+Byte 2-3: temperature_deciC
+Byte 4-7: reserved
+```
+
+Simple version:
+
+```text
+0x101 stores battery voltage and temperature information.
+```
+
+---
+
+## How do you decode battery_mV from 0x101?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Use `pack_u16()` to combine bytes 0 and 1.
+
+```cpp
+std::uint16_t battery_mV = pack_u16(frame.data[0], frame.data[1]);
+```
+
+The data is little-endian, so byte 0 is the low byte and byte 1 is the high byte.
+
+Simple version:
+
+```text
+battery_mV is decoded by combining bytes 0 and 1 into a 16-bit value.
+```
+
+---
+
+## How do you scale battery_mV to volts?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Divide by `1000.0`.
+
+```cpp
+double battery_V = battery_mV / 1000.0;
+```
+
+Example:
+
+```text
+5000 mV = 5.00 V
+12000 mV = 12.00 V
+```
+
+Simple version:
+
+```text
+Millivolts convert to volts by dividing by 1000.
+```
+
+---
+
+## How do you decode temperature_deciC from 0x101?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Use `pack_u16()` to combine bytes 2 and 3.
+
+```cpp
+std::uint16_t temperature_deciC = pack_u16(frame.data[2], frame.data[3]);
+```
+
+The data is little-endian, so byte 2 is the low byte and byte 3 is the high byte.
+
+Simple version:
+
+```text
+temperature_deciC is decoded by combining bytes 2 and 3 into a 16-bit value.
+```
+
+---
+
+## How do you scale temperature_deciC to Celsius?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Divide by `10.0`.
+
+```cpp
+double temperature_C = temperature_deciC / 10.0;
+```
+
+Example:
+
+```text
+300 deciC = 30.0 C
+805 deciC = 80.5 C
+```
+
+Simple version:
+
+```text
+Deci-degrees Celsius convert to Celsius by dividing by 10.
+```
+
+---
+
+## What does reserved mean in a CAN payload?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Reserved bytes are not used yet, but they are kept for future expansion.
+
+For `0x101`:
+
+```text
+Byte 4-7: reserved
+```
+
+They could later be used for status flags, fault bits, or extra sensor data.
+
+Simple version:
+
+```text
+Reserved bytes are unused now but available for future protocol changes.
+```
+
+---
+
+## What is a monotonic stack?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A monotonic stack keeps values in a controlled increasing or decreasing order.
+
+It is useful for problems involving next greater or next smaller values.
+
+Simple version:
+
+```text
+A monotonic stack stores unresolved values in an order that helps answer next greater or next smaller questions efficiently.
+```
+
+---
+
+## Why does Daily Temperatures store indexes?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Daily Temperatures stores indexes because the answer is the number of days waited.
+
+Code:
+
+```cpp
+answer[previous_index] = i - previous_index;
+```
+
+If I only stored temperatures, I would not know the distance between days.
+
+Simple version:
+
+```text
+Indexes are needed because the answer depends on how far apart two days are.
+```
+
+---
+
+## Why is Daily Temperatures not just a normal stack problem?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+It is not just a normal stack problem because the stack is used to maintain unresolved days in a useful order.
+
+When the current temperature is warmer than previous unresolved days, the stack helps resolve them efficiently.
+
+Simple version:
+
+```text
+Daily Temperatures uses a monotonic stack because it needs to find the next warmer day efficiently, not just use basic LIFO behavior.
+```
+
+---
+
+## What is the time complexity of Daily Temperatures?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Each index is pushed once and popped once.
+
+So the time complexity is:
+
+```text
+O(n)
+```
+
+The space complexity is:
+
+```text
+O(n)
+```
+
+Simple version:
+
+```text
+Daily Temperatures is O(n) because each day enters and leaves the stack at most once.
+```
+
+---
+
+## Week 3 Day 5 Core Interview Summary
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+CAN ID `0x101` stores battery voltage in millivolts and temperature in deci-degrees Celsius. The decoder combines little-endian byte pairs into raw values, then scales battery to volts by dividing by `1000.0` and temperature to Celsius by dividing by `10.0`. Daily Temperatures uses a monotonic stack of indexes to efficiently resolve previous days when a warmer temperature appears.
