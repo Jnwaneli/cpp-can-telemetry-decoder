@@ -92,7 +92,7 @@ void TelemetryDecoder::decode_0x101(const CanFrame& frame) {
               << battery_mV
               << std::endl;
 
-    std::cout << "Battery_V: "
+    std::cout << "Battery: "
               << std::fixed
               << std::setprecision(2)
               << battery_V
@@ -105,7 +105,7 @@ void TelemetryDecoder::decode_0x101(const CanFrame& frame) {
               << temperature_deciC
               << std::endl;
 
-    std::cout << "Temperature_C: "
+    std::cout << "Temperature: "
               << std::fixed
               << std::setprecision(1)
               << temperature_C

@@ -3792,3 +3792,410 @@ My answer:
 Reference answer:
 
 CAN ID `0x101` stores battery voltage in millivolts and temperature in deci-degrees Celsius. The decoder combines little-endian byte pairs into raw values, then scales battery to volts by dividing by `1000.0` and temperature to Celsius by dividing by `10.0`. Daily Temperatures uses a monotonic stack of indexes to efficiently resolve previous days when a warmer temperature appears.
+---
+
+# Week 3 Day 6 — unordered_map and Week 3 Review
+
+## What is a class?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A class is a custom type that groups related data and functions together.
+
+Example:
+
+```cpp
+class TelemetryDecoder {
+public:
+    void decode(const CanFrame& frame);
+
+private:
+    void decode_0x100(const CanFrame& frame);
+};
+```
+
+Simple version:
+
+```text
+A class groups related data and behavior into one object.
+```
+
+---
+
+## What is encapsulation?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Encapsulation means hiding internal implementation details and exposing a clean public interface.
+
+In this project:
+
+```text
+public decode() = outside interface
+private decode_0x100() = internal helper
+```
+
+Simple version:
+
+```text
+Encapsulation lets outside code use an object without needing to know all of its internal details.
+```
+
+---
+
+## What is a constructor?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A constructor is a special function that runs automatically when an object is created.
+
+It is used to initialize the object.
+
+Example:
+
+```cpp
+TelemetryDecoder::TelemetryDecoder()
+    : frames_seen_(0) {
+}
+```
+
+Simple version:
+
+```text
+A constructor sets up an object when it is created.
+```
+
+---
+
+## What is a destructor?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A destructor is a special function that runs automatically when an object is destroyed.
+
+It is commonly used to clean up resources.
+
+Example:
+
+```cpp
+class Example {
+public:
+    ~Example() {
+        // cleanup code
+    }
+};
+```
+
+Simple version:
+
+```text
+A destructor cleans up an object when it goes away.
+```
+
+---
+
+## What is RAII?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+RAII means Resource Acquisition Is Initialization.
+
+It means resources are acquired in a constructor and released in a destructor.
+
+Examples of resources:
+
+```text
+memory
+files
+locks
+network handles
+hardware handles
+```
+
+Simple version:
+
+```text
+RAII ties resource lifetime to object lifetime so cleanup happens automatically.
+```
+
+---
+
+## Why might embedded teams limit STL usage?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Embedded teams may limit STL usage because some STL features can involve dynamic memory allocation, larger code size, exceptions, or less predictable timing.
+
+Concerns:
+
+```text
+RAM usage
+flash/code size
+heap allocation
+deterministic timing
+hidden runtime behavior
+```
+
+Simple version:
+
+```text
+Embedded teams may limit STL usage when memory, timing, and code size must be tightly controlled.
+```
+
+---
+
+## Why use std::array instead of raw arrays sometimes?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`std::array` is safer and more convenient than a raw array while still having fixed size.
+
+It provides:
+
+```text
+.size()
+.at()
+.begin()
+.end()
+STL compatibility
+```
+
+Simple version:
+
+```text
+std::array gives fixed-size storage with safer C++ features.
+```
+
+---
+
+## How does 0x101 scaling work?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+CAN ID `0x101` stores battery voltage and temperature as raw integer values.
+
+```text
+Byte 0-1: battery_mV
+Byte 2-3: temperature_deciC
+```
+
+The decoder combines the bytes using `pack_u16()`.
+
+Then it scales:
+
+```cpp
+double battery_V = battery_mV / 1000.0;
+double temperature_C = temperature_deciC / 10.0;
+```
+
+Simple version:
+
+```text
+battery_mV is divided by 1000 to get volts, and temperature_deciC is divided by 10 to get Celsius.
+```
+
+---
+
+## What is a stack?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A stack is a data structure that uses LIFO behavior.
+
+```text
+LIFO = Last In, First Out
+```
+
+The last item added is the first item removed.
+
+Common operations:
+
+```text
+push
+pop
+top
+empty
+```
+
+Simple version:
+
+```text
+A stack removes the newest item first.
+```
+
+---
+
+## What is an unordered_map?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`std::unordered_map` stores key-value pairs.
+
+Example:
+
+```cpp
+std::unordered_map<std::uint32_t, std::string> frame_names = {
+    {0x100, "Analog Inputs"},
+    {0x101, "Battery and Temperature"}
+};
+```
+
+It provides average O(1) lookup.
+
+Simple version:
+
+```text
+unordered_map lets me quickly look up a value using a key.
+```
+
+---
+
+## Why is unordered_map useful for Top K Frequent Elements?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Top K Frequent Elements needs to count how often each number appears.
+
+`unordered_map` is useful because it maps each number to its frequency.
+
+Example:
+
+```text
+1 -> 3
+2 -> 2
+3 -> 1
+```
+
+Simple version:
+
+```text
+unordered_map is useful because it quickly counts frequencies.
+```
+
+---
+
+## Week 3 Core Interview Summary
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+This week I moved the CAN decoding logic into a `TelemetryDecoder` class. The class uses public methods as the outside interface and private helpers for specific CAN IDs. I added a constructor, formatted output, decoded `0x100` analog inputs, decoded `0x101` battery and temperature data, and scaled raw values into real units. I also practiced stack problems and learned that `std::unordered_map` provides key-value storage with average O(1) lookup.

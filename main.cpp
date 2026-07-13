@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <iostream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "can_frame.hpp"
@@ -44,6 +45,23 @@ void arrayExperiment() {
     std::cout << std::endl;
 }
 
+std::string frame_type_name(std::uint32_t id) {
+    static const std::unordered_map<std::uint32_t, std::string> frame_names = {
+        {0x100, "Analog Inputs"},
+        {0x101, "Battery and Temperature"},
+        {0x102, "Status Flags"},
+        {0x200, "Vehicle Telemetry"}
+    };
+
+    auto it = frame_names.find(id);
+
+    if (it != frame_names.end()) {
+        return it->second;
+    }
+
+    return "Unknown";
+}
+
 void print_payload(const CanFrame& frame) {
     std::cout << "Payload: ";
 
@@ -66,6 +84,10 @@ void print_frame_header(const CanFrame& frame) {
               << std::hex
               << frame.id
               << std::dec
+              << std::endl;
+
+    std::cout << "Frame Name: "
+              << frame_type_name(frame.id)
               << std::endl;
 
     std::cout << "DLC: "
@@ -152,7 +174,11 @@ int main() {
 
     std::vector<CanFrame> simulated_log = {
         {0x100, 8, {0x00, 0x08, 0x10, 0x00, 0xFF, 0x0A, 0x01, 0x05}},
-        {0x101, 8, {0x88, 0x13, 0x2C, 0x01, 0x00, 0x00, 0x00, 0x00}},
+
+        // 12600 mV = 12.60 V
+        // 345 deciC = 34.5 C
+        {0x101, 8, {0x38, 0x31, 0x59, 0x01, 0x00, 0x00, 0x00, 0x00}},
+
         {0x102, 8, {0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
         {0x999, 8, {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}},
         {0x100, 4, {0x00, 0x08, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00}}

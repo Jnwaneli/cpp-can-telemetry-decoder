@@ -1257,3 +1257,274 @@ O(n)
 ```text
 CAN ID 0x101 stores battery voltage in millivolts and temperature in deci-degrees Celsius. The decoder combines little-endian byte pairs into raw values, then scales them to volts and Celsius. Daily Temperatures uses a monotonic stack of indexes to efficiently resolve previous days when a warmer temperature appears.
 ```
+---
+
+# Day 6 — unordered_map and Scaled Output
+
+## Main goals
+
+```text
+Learn std::unordered_map.
+Understand key-value storage.
+Understand average O(1) lookup.
+Use unordered_map to map CAN IDs to readable names.
+Improve scaled 0x101 output.
+Finish Week 3 integration.
+```
+
+---
+
+## What is std::unordered_map?
+
+`std::unordered_map` stores key-value pairs.
+
+Example:
+
+```cpp
+std::unordered_map<std::uint32_t, std::string> frame_names = {
+    {0x100, "Analog Inputs"},
+    {0x101, "Battery and Temperature"},
+    {0x102, "Status Flags"},
+    {0x200, "Vehicle Telemetry"}
+};
+```
+
+In this example:
+
+```text
+key = CAN ID
+value = frame name
+```
+
+Simple explanation:
+
+```text
+std::unordered_map lets me quickly look up a value using a key.
+```
+
+---
+
+## Why is unordered_map useful?
+
+`std::unordered_map` is useful for:
+
+```text
+frequency counting
+lookup tables
+mapping IDs to names
+caching results
+checking if a key exists
+```
+
+In this project, it maps CAN IDs to readable names.
+
+Example:
+
+```text
+0x101 -> Battery and Temperature
+```
+
+---
+
+## Average O(1) lookup
+
+`std::unordered_map` has average O(1) lookup.
+
+That means looking up a key is usually constant time.
+
+Example:
+
+```cpp
+auto it = frame_names.find(id);
+```
+
+Simple explanation:
+
+```text
+unordered_map is usually fast because it uses hashing instead of searching one item at a time.
+```
+
+---
+
+## unordered_map vs vector search
+
+With a vector, I might have to check each item one by one.
+
+That is O(n).
+
+With an unordered_map, I can usually look up the key directly.
+
+That is average O(1).
+
+Simple comparison:
+
+```text
+vector search = check many items
+unordered_map lookup = jump close to the answer using a hash
+```
+
+---
+
+## Top K Frequent Elements
+
+Top K Frequent Elements uses a frequency map.
+
+Example:
+
+```text
+nums = [1, 1, 1, 2, 2, 3]
+k = 2
+```
+
+Frequency map:
+
+```text
+1 -> 3
+2 -> 2
+3 -> 1
+```
+
+Top 2 frequent:
+
+```text
+1, 2
+```
+
+The main pattern is:
+
+```text
+count frequencies with unordered_map
+rank by frequency
+return the top k keys
+```
+
+---
+
+## Scaled 0x101 output
+
+CAN ID `0x101` stores:
+
+```text
+Byte 0-1: battery_mV
+Byte 2-3: temperature_deciC
+Byte 4-7: reserved
+```
+
+The decoder first combines bytes into raw values:
+
+```cpp
+std::uint16_t battery_mV = pack_u16(frame.data[0], frame.data[1]);
+std::uint16_t temperature_deciC = pack_u16(frame.data[2], frame.data[3]);
+```
+
+Then it scales them:
+
+```cpp
+double battery_V = battery_mV / 1000.0;
+double temperature_C = temperature_deciC / 10.0;
+```
+
+---
+
+## How does 0x101 scaling work?
+
+`battery_mV` is stored in millivolts.
+
+To convert millivolts to volts:
+
+```text
+battery_V = battery_mV / 1000.0
+```
+
+Example:
+
+```text
+12600 mV = 12.60 V
+```
+
+`temperature_deciC` is stored in tenths of a degree Celsius.
+
+To convert deciC to Celsius:
+
+```text
+temperature_C = temperature_deciC / 10.0
+```
+
+Example:
+
+```text
+345 deciC = 34.5 C
+```
+
+Simple explanation:
+
+```text
+0x101 scaling converts raw integer protocol values into real-world units.
+```
+
+---
+
+## Why print scaled values?
+
+Raw values are useful for debugging the protocol.
+
+Scaled values are easier for humans to understand.
+
+Example:
+
+```text
+battery_mV = 12600
+Battery = 12.60 V
+```
+
+The scaled value is what an engineer would usually want to read quickly.
+
+---
+
+## Why might embedded teams limit STL usage?
+
+Embedded teams may limit STL usage because some STL features can involve:
+
+```text
+dynamic memory allocation
+larger code size
+less predictable timing
+exceptions
+hidden runtime behavior
+```
+
+This does not mean STL is bad.
+
+It means embedded teams choose carefully depending on the system constraints.
+
+Simple explanation:
+
+```text
+Embedded teams may limit STL usage when memory, timing, and code size need to be tightly controlled.
+```
+
+---
+
+## Week 3 deliverable summary
+
+By the end of Week 3, the project has:
+
+```text
+TelemetryDecoder class
+constructor
+private decode helpers
+decode_0x100
+decode_0x101
+formatted output
+raw-to-scaled battery output
+raw-to-scaled temperature output
+unordered_map CAN ID names
+```
+
+---
+
+## Day 6 main interview idea
+
+```text
+std::unordered_map stores key-value pairs and provides average O(1) lookup. In this project, I used it to map CAN IDs to readable frame names. I also improved 0x101 decoding by scaling battery millivolts to volts and temperature deciC to Celsius, making the output more useful as a diagnostic log.
+```
