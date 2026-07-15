@@ -6,10 +6,77 @@
 #include <unordered_map>
 #include <vector>
 
+#include "bit_utils.hpp"
 #include "can_frame.hpp"
 #include "can_validation.hpp"
 #include "circular_buffer.hpp"
 #include "telemetry_decoder.hpp"
+
+void bitExperiment() {
+    std::cout << "Bit experiment:" << std::endl;
+
+    std::uint8_t value = 0x00;
+    std::uint8_t mask = 0x04;  // bit 2
+
+    std::cout << "Initial value: 0x"
+              << std::hex
+              << static_cast<int>(value)
+              << std::dec
+              << std::endl;
+
+    value |= mask;
+
+    std::cout << "After set bit 2: 0x"
+              << std::hex
+              << static_cast<int>(value)
+              << std::dec
+              << std::endl;
+
+    bool bit_2_set = get_bit(value, 2);
+
+    std::cout << "Bit 2 set? "
+              << (bit_2_set ? "yes" : "no")
+              << std::endl;
+
+    value ^= mask;
+
+    std::cout << "After toggle bit 2: 0x"
+              << std::hex
+              << static_cast<int>(value)
+              << std::dec
+              << std::endl;
+
+    value |= mask;
+
+    std::cout << "After set bit 2 again: 0x"
+              << std::hex
+              << static_cast<int>(value)
+              << std::dec
+              << std::endl;
+
+    value &= static_cast<std::uint8_t>(~mask);
+
+    std::cout << "After clear bit 2: 0x"
+              << std::hex
+              << static_cast<int>(value)
+              << std::dec
+              << std::endl;
+
+    std::uint8_t status = 0x85;      // 1000 0101
+    std::uint8_t error_mask = 0x80;  // 1000 0000
+
+    std::cout << "Status byte: 0x"
+              << std::hex
+              << static_cast<int>(status)
+              << std::dec
+              << std::endl;
+
+    std::cout << "Error mask set? "
+              << (is_mask_set(status, error_mask) ? "yes" : "no")
+              << std::endl;
+
+    std::cout << std::endl;
+}
 
 void arrayExperiment() {
     std::cout << "Array experiment:" << std::endl;
@@ -170,6 +237,7 @@ void process_buffered_frames(CircularBuffer& rx_buffer, TelemetryDecoder& decode
 }
 
 int main() {
+    bitExperiment();
     arrayExperiment();
 
     std::vector<CanFrame> simulated_log = {

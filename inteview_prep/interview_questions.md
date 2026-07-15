@@ -4199,3 +4199,381 @@ My answer:
 Reference answer:
 
 This week I moved the CAN decoding logic into a `TelemetryDecoder` class. The class uses public methods as the outside interface and private helpers for specific CAN IDs. I added a constructor, formatted output, decoded `0x100` analog inputs, decoded `0x101` battery and temperature data, and scaled raw values into real units. I also practiced stack problems and learned that `std::unordered_map` provides key-value storage with average O(1) lookup.
+---
+
+# Week 4 Day 1 — Bit Basics
+
+## What is a bit mask?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A bit mask is a value used to target one or more specific bits.
+
+Example:
+
+```cpp
+std::uint8_t mask = 0x04;
+```
+
+Binary:
+
+```text
+0x04 = 0000 0100
+```
+
+This targets bit position `2`.
+
+Simple version:
+
+```text
+A bit mask lets me isolate, check, set, clear, or toggle specific bits.
+```
+
+---
+
+## How do you set a bit?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Use bitwise OR.
+
+```cpp
+value |= mask;
+```
+
+This forces the masked bit to become `1`.
+
+Simple version:
+
+```text
+Set means force a bit to 1.
+```
+
+---
+
+## How do you clear a bit?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Use bitwise AND with the inverted mask.
+
+```cpp
+value &= ~mask;
+```
+
+This forces the masked bit to become `0`.
+
+Simple version:
+
+```text
+Clear means force a bit to 0.
+```
+
+---
+
+## How do you toggle a bit?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Use bitwise XOR.
+
+```cpp
+value ^= mask;
+```
+
+This flips the masked bit.
+
+Simple version:
+
+```text
+Toggle means change 0 to 1 or 1 to 0.
+```
+
+---
+
+## How do you check if a bit is set?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Use bitwise AND.
+
+```cpp
+(value & mask) != 0
+```
+
+If the result is not zero, the bit is set.
+
+Simple version:
+
+```text
+Checking a bit means testing whether a specific bit is 1.
+```
+
+---
+
+## What does get_bit do?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`get_bit` checks whether one bit position is set.
+
+Example:
+
+```cpp
+bool bit_is_set = get_bit(value, 2);
+```
+
+It creates a mask by shifting `1` left by the bit position.
+
+Simple version:
+
+```text
+get_bit checks whether a selected bit position is 1.
+```
+
+---
+
+## What does is_mask_set do?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`is_mask_set` checks whether all bits in a mask are set.
+
+Example:
+
+```cpp
+return (value & mask) == mask;
+```
+
+Simple version:
+
+```text
+is_mask_set checks whether a selected mask is present in the value.
+```
+
+---
+
+## Why are flags common in embedded systems?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Flags are common because embedded systems often pack many true/false states into one byte or register.
+
+Examples:
+
+```text
+sensor valid
+error active
+ADC complete
+UART ready
+CAN fault
+low voltage
+overtemperature
+system mode
+```
+
+Simple version:
+
+```text
+Flags save space and match how hardware registers and protocol status bytes are designed.
+```
+
+---
+
+## What is a status byte?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A status byte is one byte where individual bits represent different conditions.
+
+Example:
+
+```text
+status = 0x85 = 1000 0101
+```
+
+This means bits `7`, `2`, and `0` are set.
+
+Simple version:
+
+```text
+A status byte packs multiple flags into one byte.
+```
+
+---
+
+## How did Number of 1 Bits work?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The simple method checks the lowest bit and shifts right.
+
+```cpp
+while (n != 0) {
+    count += n & 1;
+    n >>= 1;
+}
+```
+
+`n & 1` checks whether the lowest bit is `1`.
+
+`n >>= 1` moves the next bit into the lowest position.
+
+Simple version:
+
+```text
+Number of 1 Bits counts how many bits in a number are set to 1.
+```
+
+---
+
+## What does n & (n - 1) do?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`n & (n - 1)` removes the lowest set bit.
+
+Example:
+
+```text
+n     = 1011
+n - 1 = 1010
+
+n & (n - 1) = 1010
+```
+
+One `1` bit was removed.
+
+Simple version:
+
+```text
+n & (n - 1) clears the lowest 1 bit.
+```
+
+---
+
+## Week 4 Day 1 Core Interview Summary
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Bit masks are used to target specific bits inside a value. In embedded systems, flags are often packed into status bytes or hardware registers, so engineers need to know how to set, clear, toggle, and check bits. Number of 1 Bits works by using bit operations to count how many bits are set to 1.
