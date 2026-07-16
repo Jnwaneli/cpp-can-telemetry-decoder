@@ -5,6 +5,13 @@
 #include <iomanip>
 #include <iostream>
 
+namespace {
+constexpr std::uint8_t SENSOR1_VALID_MASK = 0x01;
+constexpr std::uint8_t SENSOR2_VALID_MASK = 0x02;
+constexpr std::uint8_t SENSOR3_VALID_MASK = 0x04;
+constexpr std::uint8_t ERROR_FLAG_MASK = 0x80;
+}
+
 TelemetryDecoder::TelemetryDecoder()
     : frames_seen_(0) {
 }
@@ -45,6 +52,11 @@ void TelemetryDecoder::decode_0x100(const CanFrame& frame) {
     std::uint8_t status = frame.data[6];
     std::uint8_t counter = frame.data[7];
 
+    bool sensor1_valid = is_mask_set(status, SENSOR1_VALID_MASK);
+    bool sensor2_valid = is_mask_set(status, SENSOR2_VALID_MASK);
+    bool sensor3_valid = is_mask_set(status, SENSOR3_VALID_MASK);
+    bool error_flag_set = is_mask_set(status, ERROR_FLAG_MASK);
+
     std::cout << "Type: Analog Inputs" << std::endl;
 
     std::cout << "AIN1_RAW: "
@@ -66,6 +78,22 @@ void TelemetryDecoder::decode_0x100(const CanFrame& frame) {
               << static_cast<int>(status)
               << std::dec
               << std::setfill(' ')
+              << std::endl;
+
+    std::cout << "Sensor1_VALID: "
+              << (sensor1_valid ? "yes" : "no")
+              << std::endl;
+
+    std::cout << "Sensor2_VALID: "
+              << (sensor2_valid ? "yes" : "no")
+              << std::endl;
+
+    std::cout << "Sensor3_VALID: "
+              << (sensor3_valid ? "yes" : "no")
+              << std::endl;
+
+    std::cout << "Error_Flag: "
+              << (error_flag_set ? "yes" : "no")
               << std::endl;
 
     std::cout << "Counter: "

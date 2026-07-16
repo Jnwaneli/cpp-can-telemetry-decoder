@@ -4577,3 +4577,350 @@ My answer:
 Reference answer:
 
 Bit masks are used to target specific bits inside a value. In embedded systems, flags are often packed into status bytes or hardware registers, so engineers need to know how to set, clear, toggle, and check bits. Number of 1 Bits works by using bit operations to count how many bits are set to 1.
+---
+
+# Week 4 Day 2 — constexpr Masks and Status Flags
+
+## What is constexpr?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`constexpr` means compile-time constant.
+
+It is used for values that are known before the program runs.
+
+Example:
+
+```cpp
+constexpr std::uint8_t SENSOR1_VALID_MASK = 0x01;
+```
+
+Simple version:
+
+```text
+constexpr creates a constant value known at compile time.
+```
+
+---
+
+## Why use constexpr for bit masks?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Bit masks are fixed values that should not change while the program runs.
+
+Using `constexpr` also gives masks meaningful names.
+
+Example:
+
+```cpp
+SENSOR1_VALID_MASK
+```
+
+is clearer than:
+
+```cpp
+0x01
+```
+
+Simple version:
+
+```text
+constexpr makes fixed masks readable and prevents magic numbers.
+```
+
+---
+
+## What does SENSOR1_VALID_MASK = 0x01 mean?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`0x01` is binary:
+
+```text
+0000 0001
+```
+
+It targets bit `0`.
+
+If bit `0` represents sensor 1 validity, then `SENSOR1_VALID_MASK` checks whether sensor 1 is valid.
+
+Simple version:
+
+```text
+SENSOR1_VALID_MASK targets bit 0 of the status byte.
+```
+
+---
+
+## How is 0x07 interpreted as flags?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`0x07` is binary:
+
+```text
+0000 0111
+```
+
+This means bits `0`, `1`, and `2` are set.
+
+If those bits mean sensor validity, then:
+
+```text
+sensor 1 valid = yes
+sensor 2 valid = yes
+sensor 3 valid = yes
+```
+
+Simple version:
+
+```text
+0x07 means the first three flag bits are set.
+```
+
+---
+
+## What does bit 0 mean in the 0x100 status byte?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Bit `0` means sensor 1 valid.
+
+Simple version:
+
+```text
+If bit 0 is set, sensor 1 is valid.
+```
+
+---
+
+## What does bit 1 mean in the 0x100 status byte?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Bit `1` means sensor 2 valid.
+
+Simple version:
+
+```text
+If bit 1 is set, sensor 2 is valid.
+```
+
+---
+
+## What does bit 2 mean in the 0x100 status byte?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Bit `2` means sensor 3 valid.
+
+Simple version:
+
+```text
+If bit 2 is set, sensor 3 is valid.
+```
+
+---
+
+## What is the difference between raw value and interpreted status?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The raw value is the byte from the CAN payload.
+
+Example:
+
+```text
+Status: 0x07
+```
+
+The interpreted status explains what the bits mean.
+
+Example:
+
+```text
+Sensor1_VALID: yes
+Sensor2_VALID: yes
+Sensor3_VALID: yes
+```
+
+Simple version:
+
+```text
+Raw value is the data byte. Interpreted status is the meaning of the bits inside it.
+```
+
+---
+
+## How does Counting Bits work?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Counting Bits builds an array where each index stores the number of `1` bits in that number.
+
+Example:
+
+```text
+bits[5] = 2
+```
+
+because:
+
+```text
+5 = 101 binary
+```
+
+and there are two `1` bits.
+
+Simple version:
+
+```text
+Counting Bits calculates the number of set bits for every number from 0 to n.
+```
+
+---
+
+## What does bits[i] = bits[i >> 1] + (i & 1) mean?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`i >> 1` removes the last bit.
+
+`i & 1` checks whether the last bit was `1`.
+
+So:
+
+```cpp
+bits[i] = bits[i >> 1] + (i & 1);
+```
+
+means:
+
+```text
+bit count of i = bit count of i without its last bit + whether the last bit was 1
+```
+
+Simple version:
+
+```text
+Use the smaller number's bit count, then add the last bit.
+```
+
+---
+
+## Week 4 Day 2 Core Interview Summary
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`constexpr` is useful for fixed masks because it gives meaningful names to compile-time constants. In the decoder, the raw status byte `0x07` is interpreted as individual sensor-valid flags, turning raw CAN payload data into readable system status.
