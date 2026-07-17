@@ -1,3 +1,519 @@
+# Week 4 Notes — Bit Utilities, Status Flags, and Fault Analysis
+
+## Purpose of this file
+
+These are the regular Week 4 learning notes for the C++ CAN telemetry decoder project.
+
+Interview-style question/answer practice should stay in:
+
+```text
+inteview_prep/interview_questions.md
+```
+
+This file should focus on what was learned and built during Week 4.
+
+---
+
+# Week 4 Big Picture
+
+Week 4 moved the project from basic decoding into a more realistic embedded telemetry pipeline.
+
+Main project flow:
+
+```text
+Simulated CAN log
+→ CircularBuffer RX queue
+→ Frame validation
+→ TelemetryDecoder
+→ byte packing and status-mask decoding
+→ decoded telemetry data structs
+→ FaultAnalyzer
+→ OK/fault output
+```
+
+The key idea is separation of responsibility:
+
+```text
+CanFrame          = stores raw CAN frame data
+CircularBuffer    = stores received frames in FIFO order
+can_validation    = checks frame shape, ID, and DLC
+bit_utils         = provides byte packing and bit checking helpers
+TelemetryDecoder  = turns CAN payload bytes into meaningful values
+AnalogData        = stores decoded analog values and flags
+FaultAnalyzer     = checks decoded values for abnormal conditions
+```
+
+---
+
+# Day 1 — Bit Basics
+
+## Main goals
+
+```text
+Understand bit masks.
+Practice setting, clearing, toggling, and checking bits.
+Create bit helper functions.
+Connect bit operations to CAN status bytes.
+Practice Number of 1 Bits.
+```
+
+---
+
+## What is a bit?
+
+A bit is a single binary digit.
+
+It can only be:
+
+```text
+0 or 1
+```
+
+A byte contains 8 bits.
+
+Example:
+
+```text
+0b00000101
+```
+
+Bit positions are counted from right to left:
+
+```text
+bit position: 7 6 5 4 3 2 1 0
+value:        0 0 0 0 0 1 0 1
+```
+
+So in `0b00000101`:
+
+```text
+bit 0 = 1
+bit 1 = 0
+bit 2 = 1
+```
+
+---
+
+## What is a bit mask?
+
+A bit mask is a value used to target one or more specific bits.
+
+Example:
+
+```cpp
+std::uint8_t mask = 0x04;
+```
+
+Binary:
+
+```text
+0x04 = 0000 0100
+```
+
+That targets bit position `2`.
+
+Simple explanation:
+
+```text
+A bit mask lets us isolate, check, set, clear, or toggle specific bits.
+```
+
+---
+
+## Setting a bit
+
+To set a bit, use bitwise OR:
+
+```cpp
+value |= mask;
+```
+
+This forces the masked bit to become `1`.
+
+Example:
+
+```text
+value: 0000 0000
+mask:  0000 0100
+----------------
+result:0000 0100
+```
+
+Simple explanation:
+
+```text
+Set means force a bit to 1.
+```
+
+---
+
+## Clearing a bit
+
+To clear a bit, use bitwise AND with the inverted mask:
+
+```cpp
+value &= static_cast<std::uint8_t>(~mask);
+```
+
+This forces the masked bit to become `0`.
+
+Example:
+
+```text
+value: 0000 0100
+mask:  0000 0100
+~mask: 1111 1011
+----------------
+result:0000 0000
+```
+
+Simple explanation:
+
+```text
+Clear means force a bit to 0.
+```
+
+---
+
+## Toggling a bit
+
+To toggle a bit, use XOR:
+
+```cpp
+value ^= mask;
+```
+
+This flips the masked bit.
+
+```text
+0 becomes 1
+1 becomes 0
+```
+
+Simple explanation:
+
+```text
+Toggle means change 0 to 1 or 1 to 0.
+```
+
+---
+
+## Checking a bit
+
+To check a bit, use bitwise AND:
+
+```cpp
+(value & mask) != 0
+```
+
+If the result is not zero, the bit is set.
+
+Simple explanation:
+
+```text
+Checking a bit means testing whether a specific bit is 1.
+```
+
+---
+
+## `get_bit`
+
+`get_bit` checks whether one bit position is set.
+
+Example:
+
+```cpp
+bool bit_is_set = get_bit(value, 2);
+```
+
+Implementation idea:
+
+```cpp
+bool get_bit(std::uint8_t value, int bit_position) {
+    if (bit_position < 0 || bit_position > 7) {
+        return false;
+    }
+
+    std::uint8_t mask = static_cast<std::uint8_t>(1u << bit_position);
+
+    return (value & mask) != 0;
+}
+```
+
+Simple explanation:
+
+```text
+get_bit checks whether a selected bit position is 1.
+```
+
+---
+
+## `is_mask_set`
+
+`is_mask_set` checks whether all bits in a mask are set.
+
+Implementation idea:
+
+```cpp
+bool is_mask_set(std::uint8_t value, std::uint8_t mask) {
+    return (value & mask) == mask;
+}
+```
+
+This is stricter than:
+
+```cpp
+(value & mask) != 0
+```
+
+because:
+
+```text
+(value & mask) != 0   checks if any masked bit is set
+(value & mask) == mask checks if all masked bits are set
+```
+
+For single-bit masks, both usually behave the same.
+
+Simple explanation:
+
+```text
+is_mask_set checks whether a selected mask is fully present in the value.
+```
+
+---
+
+## Why flags are common in embedded systems
+
+Flags are common because embedded systems often pack many true/false states into one byte or register.
+
+Examples:
+
+```text
+sensor valid
+error active
+ADC complete
+UART ready
+CAN fault
+low voltage
+overtemperature
+system mode
+```
+
+Simple explanation:
+
+```text
+Flags save space and match how hardware registers and protocol status bytes are designed.
+```
+
+---
+
+## What is a status byte?
+
+A status byte is one byte where individual bits represent different conditions.
+
+Example:
+
+```text
+status = 0x85 = 1000 0101
+```
+
+This means bits `7`, `2`, and `0` are set.
+
+Simple explanation:
+
+```text
+A status byte packs multiple flags into one byte.
+```
+
+---
+
+# Day 2 — `constexpr` Masks and Status Flags
+
+## Main goals
+
+```text
+Understand constexpr.
+Use named masks for status flags.
+Decode sensor-valid bits from the 0x100 status byte.
+Understand raw byte values versus interpreted status.
+Practice Counting Bits.
+```
+
+---
+
+## What is `constexpr`?
+
+`constexpr` means compile-time constant.
+
+It is used for values that are known before the program runs.
+
+Example:
+
+```cpp
+constexpr std::uint8_t SENSOR1_VALID_MASK = 0x01;
+```
+
+Simple explanation:
+
+```text
+constexpr creates a constant value known at compile time.
+```
+
+---
+
+## Why use `constexpr` for bit masks?
+
+Bit masks are fixed protocol rules.
+
+Example:
+
+```text
+bit 0 = sensor 1 valid
+bit 1 = sensor 2 valid
+bit 2 = sensor 3 valid
+bit 7 = error flag
+```
+
+These meanings should not change while the program runs.
+
+So instead of writing:
+
+```cpp
+is_mask_set(status, 0x01);
+```
+
+write:
+
+```cpp
+is_mask_set(status, SENSOR1_VALID_MASK);
+```
+
+Simple explanation:
+
+```text
+constexpr makes fixed masks readable and prevents magic numbers.
+```
+
+---
+
+## Status masks used in the decoder
+
+The `0x100` analog-input frame uses a status byte.
+
+Current mask layout:
+
+```cpp
+constexpr std::uint8_t SENSOR1_VALID_MASK = 0x01; // bit 0
+constexpr std::uint8_t SENSOR2_VALID_MASK = 0x02; // bit 1
+constexpr std::uint8_t SENSOR3_VALID_MASK = 0x04; // bit 2
+constexpr std::uint8_t ERROR_FLAG_MASK    = 0x80; // bit 7
+```
+
+Meaning:
+
+```text
+0x01 = 0000 0001 = bit 0
+0x02 = 0000 0010 = bit 1
+0x04 = 0000 0100 = bit 2
+0x80 = 1000 0000 = bit 7
+```
+
+---
+
+## How `0x07` is interpreted as flags
+
+`0x07` in binary is:
+
+```text
+0000 0111
+```
+
+This means bits `0`, `1`, and `2` are set.
+
+If those bits mean sensor validity, then:
+
+```text
+sensor 1 valid = yes
+sensor 2 valid = yes
+sensor 3 valid = yes
+error flag      = no
+```
+
+Simple explanation:
+
+```text
+0x07 means the first three flag bits are set.
+```
+
+---
+
+## Raw status value versus interpreted status
+
+The raw value is the byte from the CAN payload.
+
+Example:
+
+```text
+Status: 0x07
+```
+
+The interpreted status explains what the bits mean.
+
+Example:
+
+```text
+Sensor1_VALID: yes
+Sensor2_VALID: yes
+Sensor3_VALID: yes
+Error_Flag: no
+```
+
+Simple explanation:
+
+```text
+Raw value is the data byte. Interpreted status is the meaning of the bits inside it.
+```
+
+---
+
+## Where masks fit in the decoder pipeline
+
+For the `0x100` frame:
+
+```text
+data[0] + data[1] = AIN1 raw value
+data[2] + data[3] = AIN2 raw value
+data[4] + data[5] = AIN3 raw value
+data[6]           = status byte
+data[7]           = counter
+```
+
+The first six bytes are packed into raw ADC values:
+
+```cpp
+std::uint16_t ain1 = pack_u16(frame.data[0], frame.data[1]);
+std::uint16_t ain2 = pack_u16(frame.data[2], frame.data[3]);
+std::uint16_t ain3 = pack_u16(frame.data[4], frame.data[5]);
+```
+
+The status byte is decoded with masks:
+
+```cpp
+std::uint8_t status = frame.data[6];
+
+bool sensor1_valid  = is_mask_set(status, SENSOR1_VALID_MASK);
+bool sensor2_valid  = is_mask_set(status, SENSOR2_VALID_MASK);
+bool sensor3_valid  = is_mask_set(status, SENSOR3_VALID_MASK);
+bool error_flag_set = is_mask_set(status, ERROR_FLAG_MASK);
+```
+
+Simple explanation:
+
+```text
+Masks turn packed status bits into readable boolean variables.
+```
+
 ---
 
 # Day 3 — XOR and FaultAnalyzer
@@ -60,7 +576,7 @@ XOR flips selected bits.
 
 ---
 
-## Why does XOR find the single number?
+## Why XOR finds the single number
 
 In Single Number, every value appears twice except one.
 
@@ -95,26 +611,6 @@ XOR finds the single number because pairs cancel out and the unpaired value rema
 
 ---
 
-## Single Number code idea
-
-```cpp
-int result = 0;
-
-for (int num : nums) {
-    result ^= num;
-}
-
-return result;
-```
-
-The result starts at zero because:
-
-```text
-x ^ 0 = x
-```
-
----
-
 ## Missing Number with XOR
 
 Missing Number can also use XOR.
@@ -132,11 +628,11 @@ This works because XOR cancellation removes matching pairs.
 
 ---
 
-## What is AnalogData?
+## What is `AnalogData`?
 
 `AnalogData` is a struct that holds decoded analog frame data.
 
-Example fields:
+Fields:
 
 ```text
 ain1_raw
@@ -152,13 +648,19 @@ error_flag_set
 
 This lets the decoder pass meaningful data to the fault analyzer.
 
+Simple explanation:
+
+```text
+AnalogData stores decoded values from the 0x100 CAN frame in one object.
+```
+
 ---
 
-## What should a FaultAnalyzer class do?
+## What should `FaultAnalyzer` do?
 
-A `FaultAnalyzer` should check decoded telemetry values against fault rules.
+`FaultAnalyzer` checks decoded telemetry values against fault rules.
 
-It should check things like:
+It checks things like:
 
 ```text
 sensor invalid flags
@@ -177,7 +679,7 @@ FaultAnalyzer checks decoded values and reports problems.
 
 ---
 
-## What should FaultAnalyzer not do?
+## What should `FaultAnalyzer` not do?
 
 `FaultAnalyzer` should not decode raw CAN bytes.
 
@@ -189,7 +691,7 @@ Simple separation:
 
 ```text
 TelemetryDecoder = convert raw bytes into meaningful values
-FaultAnalyzer = check meaningful values for faults
+FaultAnalyzer    = check meaningful values for faults
 ```
 
 ---
@@ -228,8 +730,283 @@ Separating decoding from fault checking keeps each class focused on one job.
 
 ---
 
-## Day 3 main interview idea
+# Full Decoder Path So Far
+
+## 1. Sensor creates an electrical signal
+
+A physical sensor outputs a voltage.
+
+Example:
 
 ```text
-XOR is useful because duplicate values cancel out, which solves problems like Single Number. In the CAN decoder project, FaultAnalyzer separates fault rules from byte decoding, so TelemetryDecoder converts raw CAN payloads into values while FaultAnalyzer checks those values for abnormal conditions.
+sensor voltage = 2.5 V
+```
+
+The sensor itself does not create CAN data. It creates an electrical signal.
+
+---
+
+## 2. Microcontroller ADC converts voltage into a raw count
+
+A 12-bit ADC converts voltage into a number from:
+
+```text
+0 to 4095
+```
+
+because:
+
+```text
+2^12 = 4096 possible values
+```
+
+Counting starts at zero, so the largest valid value is `4095`.
+
+Example:
+
+```text
+0 V   -> 0
+2.5 V -> about 2048
+5 V   -> 4095
+```
+
+The `0–4095` range comes from the ADC resolution, not from CAN.
+
+---
+
+## 3. Sender packs ADC values into CAN bytes
+
+CAN payload elements are bytes.
+
+```text
+1 byte = 8 bits
+```
+
+A 12-bit ADC value does not fit in one byte, so the sender stores it using two bytes.
+
+Example:
+
+```text
+AIN1_RAW = 2048 decimal = 0x0800
+```
+
+Little-endian byte layout:
+
+```text
+low byte  = 0x00
+high byte = 0x08
+```
+
+So the CAN payload contains:
+
+```cpp
+data[0] = 0x00;
+data[1] = 0x08;
+```
+
+---
+
+## 4. Program receives a `CanFrame`
+
+Example frame:
+
+```cpp
+{0x100, 8, {0x00, 0x08, 0x10, 0x00, 0xFF, 0x0A, 0x07, 0x05}}
+```
+
+Breakdown:
+
+```text
+ID       = 0x100
+DLC      = 8
+data[0]  = 0x00
+data[1]  = 0x08
+data[2]  = 0x10
+data[3]  = 0x00
+data[4]  = 0xFF
+data[5]  = 0x0A
+data[6]  = 0x07
+data[7]  = 0x05
+```
+
+---
+
+## 5. Frame validation checks the message shape
+
+Before decoding, the program checks:
+
+```cpp
+if (!is_known_id(frame.id)) {
+    faults.push_back("Unknown CAN ID");
+}
+
+if (!has_valid_dlc(frame)) {
+    faults.push_back("Invalid DLC");
+}
+```
+
+This asks:
+
+```text
+Is this a CAN ID we understand?
+Does it have the expected number of bytes?
+```
+
+This is frame-level validation.
+
+It does not check whether the sensor data is healthy yet.
+
+---
+
+## 6. `TelemetryDecoder` routes by CAN ID
+
+The decoder chooses the correct helper based on the CAN ID.
+
+Example:
+
+```cpp
+switch (frame.id) {
+    case 0x100:
+        decode_0x100(frame);
+        break;
+
+    case 0x101:
+        decode_0x101(frame);
+        break;
+}
+```
+
+This matters because different CAN IDs have different payload layouts.
+
+---
+
+## 7. Bytes are packed back into raw values
+
+For `0x100`:
+
+```cpp
+std::uint16_t ain1 = pack_u16(frame.data[0], frame.data[1]);
+std::uint16_t ain2 = pack_u16(frame.data[2], frame.data[3]);
+std::uint16_t ain3 = pack_u16(frame.data[4], frame.data[5]);
+```
+
+Example:
+
+```cpp
+pack_u16(0x00, 0x08)
+```
+
+becomes:
+
+```text
+0x0800 = 2048
+```
+
+Important:
+
+```text
+uint16_t is just the container.
+The actual ADC value is still expected to be 0–4095 because the ADC is 12-bit.
+```
+
+---
+
+## 8. Status byte is decoded with masks
+
+The decoder reads:
+
+```cpp
+std::uint8_t status = frame.data[6];
+```
+
+Example:
+
+```text
+status = 0x07 = 0000 0111
+```
+
+Then masks turn the bits into booleans:
+
+```cpp
+bool sensor1_valid  = is_mask_set(status, SENSOR1_VALID_MASK);
+bool sensor2_valid  = is_mask_set(status, SENSOR2_VALID_MASK);
+bool sensor3_valid  = is_mask_set(status, SENSOR3_VALID_MASK);
+bool error_flag_set = is_mask_set(status, ERROR_FLAG_MASK);
+```
+
+Result:
+
+```text
+sensor1_valid  = true
+sensor2_valid  = true
+sensor3_valid  = true
+error_flag_set = false
+```
+
+---
+
+## 9. Decoded values are stored in `AnalogData`
+
+Conceptually:
+
+```cpp
+AnalogData data{
+    ain1,
+    ain2,
+    ain3,
+    status,
+    counter,
+    sensor1_valid,
+    sensor2_valid,
+    sensor3_valid,
+    error_flag_set
+};
+```
+
+Now the raw CAN bytes have become meaningful decoded data.
+
+---
+
+## 10. `FaultAnalyzer` checks the decoded data
+
+Analog checks include:
+
+```cpp
+if (data.ain1_raw > 4095) {
+    std::cout << "Fault: AIN1 raw value out of 12-bit ADC range" << std::endl;
+}
+
+if (!data.sensor1_valid) {
+    std::cout << "Fault: Sensor 1 invalid" << std::endl;
+}
+
+if (data.error_flag_set) {
+    std::cout << "Fault: Error flag set in analog status byte" << std::endl;
+}
+```
+
+Battery and temperature checks include:
+
+```cpp
+if (voltage < 10.5) {
+    std::cout << "Fault: Battery voltage too low" << std::endl;
+}
+
+if (voltage > 14.8) {
+    std::cout << "Fault: Battery voltage too high" << std::endl;
+}
+
+if (temperature > 80.0) {
+    std::cout << "Fault: Temperature too high" << std::endl;
+}
+```
+
+This is data-level fault analysis.
+
+---
+
+# Week 4 Main Takeaway
+
+```text
+Week 4 introduced the bit-level and fault-analysis layer of the CAN decoder. The project now validates frame shape, decodes raw bytes into meaningful values, extracts status flags with masks, stores decoded analog data in a struct, and checks the decoded values with a FaultAnalyzer.
 ```
