@@ -16,6 +16,7 @@ public:
 private:
     void decode_0x100(const CanFrame& frame);
     void decode_0x101(const CanFrame& frame);
+    void decode_0x102(const CanFrame& frame);
 
     FaultAnalyzer fault_analyzer_;
     std::size_t frames_seen_;

@@ -5257,3 +5257,357 @@ My answer:
 Reference answer:
 
 XOR is useful because duplicate values cancel out, which solves problems like Single Number and Missing Number. In the CAN decoder project, `FaultAnalyzer` separates fault rules from byte decoding, so `TelemetryDecoder` converts raw CAN payloads into values while `FaultAnalyzer` checks those values for abnormal conditions.
+---
+
+# Week 4 Day 5 — volatile Concept and Sensor Faults
+
+## What is volatile?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`volatile` tells the compiler that a variable can change outside normal program flow.
+
+This means the compiler should not optimize away reads or writes to that variable.
+
+Simple version:
+
+```text
+volatile tells the compiler that something outside normal code may change this value.
+```
+
+---
+
+## Why is volatile used for hardware registers?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Hardware registers can change because of hardware events.
+
+Examples:
+
+```text
+GPIO pin changes
+ADC conversion completes
+UART receives data
+timer counter increments
+CAN message arrives
+interrupt flag gets set
+```
+
+Simple version:
+
+```text
+volatile is used because hardware can change register values without normal C++ assignment.
+```
+
+---
+
+## What are common examples of volatile variables?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Common examples include:
+
+```text
+hardware registers
+memory-mapped peripheral registers
+ISR-shared flags
+timer counters
+GPIO registers
+status registers
+```
+
+Simple version:
+
+```text
+volatile is common for hardware registers and interrupt-shared flags.
+```
+
+---
+
+## Why is volatile not enough for thread safety?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`volatile` does not make operations atomic.
+
+It does not prevent race conditions.
+
+Example:
+
+```cpp
+counter++;
+```
+
+This can involve:
+
+```text
+read counter
+add one
+write counter
+```
+
+An interrupt or another thread could interfere between those steps.
+
+Simple version:
+
+```text
+volatile controls compiler optimization, but it does not protect shared data.
+```
+
+---
+
+## What does GPIO_ODR |= (1U << 5) do?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+It sets bit 5 of the GPIO output register.
+
+```cpp
+GPIO_ODR |= (1U << 5);
+```
+
+In a real embedded system, this could turn on a GPIO pin or LED.
+
+Simple version:
+
+```text
+It sets bit 5 to 1.
+```
+
+---
+
+## What does GPIO_ODR &= ~(1U << 5) do?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+It clears bit 5 of the GPIO output register.
+
+```cpp
+GPIO_ODR &= ~(1U << 5);
+```
+
+In a real embedded system, this could turn off a GPIO pin or LED.
+
+Simple version:
+
+```text
+It clears bit 5 to 0.
+```
+
+---
+
+## How do sensor-valid flags produce faults?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Each sensor-valid flag is checked with a mask.
+
+If the bit is not set, that sensor is considered invalid.
+
+Example:
+
+```cpp
+if (!data.sensor1_valid) {
+    std::cout << "FAULT: Sensor 1 invalid" << std::endl;
+}
+```
+
+Simple version:
+
+```text
+Missing valid bits become sensor-invalid faults.
+```
+
+---
+
+## What does status byte 0x00 mean for sensor-valid flags?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`0x00` is binary:
+
+```text
+0000 0000
+```
+
+So none of the sensor-valid bits are set.
+
+That means:
+
+```text
+sensor 1 invalid
+sensor 2 invalid
+sensor 3 invalid
+```
+
+Simple version:
+
+```text
+0x00 means no sensors are marked valid.
+```
+
+---
+
+## How does Sum of Two Integers work without + or -?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+It uses bit operations.
+
+```text
+XOR = sum without carry
+AND = carry bits
+carry << 1 = move carry to next position
+```
+
+Repeat until there is no carry.
+
+Simple version:
+
+```text
+Use XOR for the sum and AND-shift for the carry.
+```
+
+---
+
+## Why does XOR represent addition without carry?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+XOR gives `1` when bits are different and `0` when bits are the same.
+
+Binary addition without carry behaves the same way:
+
+```text
+0 + 0 = 0
+1 + 0 = 1
+0 + 1 = 1
+1 + 1 = 0 with carry
+```
+
+The `1 + 1` case needs a carry, which is handled separately with AND.
+
+Simple version:
+
+```text
+XOR gives the bit result of addition before handling carry.
+```
+
+---
+
+## Week 4 Day 5 Core Interview Summary
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`volatile` tells the compiler that a variable can change outside normal program flow, which is important for hardware registers and ISR-shared flags. It does not provide thread safety. In the CAN decoder, missing sensor-valid bits are interpreted as sensor faults and reported by `FaultAnalyzer`.

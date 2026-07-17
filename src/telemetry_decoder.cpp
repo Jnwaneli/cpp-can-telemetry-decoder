@@ -30,6 +30,10 @@ void TelemetryDecoder::decode(const CanFrame& frame) {
             decode_0x101(frame);
             break;
 
+        case 0x102:
+            decode_0x102(frame);
+            break;
+
         default:
             std::cout << "Type: Known frame, decoder not implemented yet" << std::endl;
             break;
@@ -159,4 +163,54 @@ void TelemetryDecoder::decode_0x101(const CanFrame& frame) {
               << std::endl;
 
     fault_analyzer_.check_battery_temp_faults(battery_V, temperature_C);
+}
+
+void TelemetryDecoder::decode_0x102(const CanFrame& frame) {
+    if (frame.dlc < 8) {
+        std::cout << "Type: Status Flags" << std::endl;
+        std::cout << "Result: FAULT - Invalid DLC for 0x102 decoder" << std::endl;
+        return;
+    }
+
+    std::uint8_t sensor_valid_flags = frame.data[0];
+    std::uint8_t system_fault_flags = frame.data[1];
+    std::uint8_t mode = frame.data[2];
+    std::uint8_t error_code = frame.data[3];
+
+    bool sensor1_valid = is_mask_set(sensor_valid_flags, SENSOR1_VALID_MASK);
+    bool sensor2_valid = is_mask_set(sensor_valid_flags, SENSOR2_VALID_MASK);
+    bool sensor3_valid = is_mask_set(sensor_valid_flags, SENSOR3_VALID_MASK);
+
+    std::cout << "Type: Status Flags" << std::endl;
+
+    std::cout << "Status Frame 0x102:" << std::endl;
+
+    std::cout << "Sensor1 Valid: "
+              << (sensor1_valid ? "YES" : "NO")
+              << std::endl;
+
+    std::cout << "Sensor2 Valid: "
+              << (sensor2_valid ? "YES" : "NO")
+              << std::endl;
+
+    std::cout << "Sensor3 Valid: "
+              << (sensor3_valid ? "YES" : "NO")
+              << std::endl;
+
+    std::cout << "System Fault Byte: 0x"
+              << std::hex
+              << std::setw(2)
+              << std::setfill('0')
+              << static_cast<int>(system_fault_flags)
+              << std::dec
+              << std::setfill(' ')
+              << std::endl;
+
+    std::cout << "Mode: "
+              << static_cast<int>(mode)
+              << std::endl;
+
+    std::cout << "Error Code: "
+              << static_cast<int>(error_code)
+              << std::endl;
 }

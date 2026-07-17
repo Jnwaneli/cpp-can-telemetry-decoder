@@ -180,10 +180,10 @@ void process_frame(const CanFrame& frame, TelemetryDecoder& decoder) {
     }
 
     if (!faults.empty()) {
-        std::cout << "Result: FAULT" << std::endl;
+        std::cout << "Frame Validation: FAULT" << std::endl;
 
         for (const std::string& fault : faults) {
-            std::cout << "Fault: " << fault << std::endl;
+            std::cout << "FAULT: " << fault << std::endl;
         }
 
         return;
@@ -191,7 +191,7 @@ void process_frame(const CanFrame& frame, TelemetryDecoder& decoder) {
 
     decoder.decode(frame);
 
-    std::cout << "Result: OK" << std::endl;
+    std::cout << "Frame Validation: OK" << std::endl;
 }
 
 void load_frames_into_buffer(const std::vector<CanFrame>& log, CircularBuffer& rx_buffer) {
@@ -241,14 +241,16 @@ int main() {
     arrayExperiment();
 
     std::vector<CanFrame> simulated_log = {
-        // status 0x07 = sensor 1, 2, and 3 valid
-        {0x100, 8, {0x00, 0x08, 0x10, 0x00, 0xFF, 0x0A, 0x07, 0x05}},
+        // status 0x00 = sensor 1, 2, and 3 invalid
+        {0x100, 8, {0x00, 0x08, 0x10, 0x00, 0xFF, 0x0A, 0x00, 0x05}},
 
         // 12600 mV = 12.60 V
         // 345 deciC = 34.5 C
         {0x101, 8, {0x38, 0x31, 0x59, 0x01, 0x00, 0x00, 0x00, 0x00}},
 
-        {0x102, 8, {0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+        // sensor valid flags = 0x07, system fault flags = 0x00, mode = 1, error code = 0
+        {0x102, 8, {0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00}},
+
         {0x999, 8, {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}},
         {0x100, 4, {0x00, 0x08, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00}}
     };

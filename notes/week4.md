@@ -1010,3 +1010,528 @@ This is data-level fault analysis.
 ```text
 Week 4 introduced the bit-level and fault-analysis layer of the CAN decoder. The project now validates frame shape, decodes raw bytes into meaningful values, extracts status flags with masks, stores decoded analog data in a struct, and checks the decoded values with a FaultAnalyzer.
 ```
+---
+
+# Day 4 — Decode 0x102 and Reverse Bits
+
+## Main goals
+
+```text
+Study reverse bits.
+Solve Reverse Bits.
+Decode CAN ID 0x102.
+Interpret sensor valid flags, system fault byte, mode, and error code.
+```
+
+---
+
+## What does 0x102 represent?
+
+CAN ID `0x102` represents a status frame.
+
+It carries system state information rather than raw analog measurements.
+
+Payload format:
+
+```text
+Byte 0: sensor valid flags
+Byte 1: system fault flags
+Byte 2: mode
+Byte 3: error code
+Byte 4-7: reserved
+```
+
+Simple explanation:
+
+```text
+0x102 tells me the system status, sensor validity, mode, and error state.
+```
+
+---
+
+## 0x102 payload format
+
+```text
+Byte 0: sensor valid flags
+Byte 1: system fault flags
+Byte 2: mode
+Byte 3: error code
+Byte 4-7: reserved
+```
+
+Example:
+
+```text
+0x07 0x00 0x01 0x00 0x00 0x00 0x00 0x00
+```
+
+Meaning:
+
+```text
+sensor valid flags = 0x07
+system fault byte = 0x00
+mode = 1
+error code = 0
+```
+
+---
+
+## Sensor valid flags
+
+The sensor valid flags byte uses individual bits.
+
+```text
+bit 0 = sensor 1 valid
+bit 1 = sensor 2 valid
+bit 2 = sensor 3 valid
+```
+
+If byte 0 is:
+
+```text
+0x07 = 0000 0111
+```
+
+then bits 0, 1, and 2 are set.
+
+So:
+
+```text
+Sensor1 Valid: YES
+Sensor2 Valid: YES
+Sensor3 Valid: YES
+```
+
+---
+
+## How are status flags different from analog values?
+
+Analog values are numeric measurements.
+
+Examples:
+
+```text
+AIN1_RAW: 2048
+Battery: 12.60 V
+Temperature: 34.5 C
+```
+
+Status flags are true/false meanings stored in bits.
+
+Examples:
+
+```text
+Sensor1 Valid: YES
+Sensor2 Valid: YES
+System Fault Active: NO
+```
+
+Simple explanation:
+
+```text
+Analog values measure quantities, while status flags describe conditions.
+```
+
+---
+
+## System fault byte
+
+The system fault byte stores fault bits.
+
+For now:
+
+```text
+System Fault Byte: 0x00
+```
+
+means no system fault bits are set.
+
+Later this could represent:
+
+```text
+low voltage
+overtemperature
+communication fault
+sensor fault
+internal error
+```
+
+---
+
+## Mode
+
+The mode byte tells what state the embedded system is in.
+
+Example modes could be:
+
+```text
+0 = idle
+1 = running
+2 = calibration
+3 = fault
+```
+
+In the sample frame:
+
+```text
+Mode: 1
+```
+
+This can be interpreted as the system running.
+
+---
+
+## Error code
+
+The error code gives a compact reason for a fault or abnormal state.
+
+Example error codes could be:
+
+```text
+0 = no error
+1 = low voltage
+2 = high temperature
+3 = sensor failure
+4 = CAN timeout
+```
+
+In the sample frame:
+
+```text
+Error Code: 0
+```
+
+This means no specific error code is active.
+
+---
+
+## Why are modes and error codes common in embedded systems?
+
+Modes and error codes are common because embedded systems need compact ways to report system state and problems.
+
+A mode tells what the system is currently doing.
+
+An error code tells what went wrong.
+
+Simple explanation:
+
+```text
+Modes describe system state, and error codes describe specific problems.
+```
+
+---
+
+## Reverse Bits
+
+LeetCode 190 asks me to reverse all 32 bits of an unsigned integer.
+
+Main idea:
+
+```text
+Take the lowest bit from n.
+Shift result left.
+Put that bit into result.
+Shift n right.
+Repeat 32 times.
+```
+
+Code idea:
+
+```cpp
+uint32_t result = 0;
+
+for (int i = 0; i < 32; i++) {
+    result <<= 1;
+    result |= (n & 1);
+    n >>= 1;
+}
+```
+
+---
+
+## How Reverse Bits works
+
+`n & 1` gets the lowest bit of `n`.
+
+`result <<= 1` makes room in the result.
+
+`result |= (n & 1)` inserts the extracted bit.
+
+`n >>= 1` moves to the next bit.
+
+Simple explanation:
+
+```text
+Reverse Bits reads bits from the right side of n and builds the reversed result from left to right.
+```
+
+---
+
+## Day 4 main interview idea
+
+```text
+0x102 is a status frame. Unlike analog frames that carry numeric measurements, status frames carry bit-level flags, mode, and error code information. This is common in embedded systems because status bytes compactly represent system state and fault conditions.
+```
+---
+
+# Day 5 — volatile Concept and Sensor Faults
+
+## Main goals
+
+```text
+Understand embedded-style volatile.
+Understand why volatile is used for hardware registers.
+Understand why volatile is not thread safety.
+Add sensor-invalid faults.
+Solve Sum of Two Integers.
+```
+
+---
+
+## What is volatile?
+
+`volatile` tells the compiler that a value can change outside normal program flow.
+
+Example:
+
+```cpp
+volatile std::uint32_t GPIO_ODR;
+```
+
+This means the compiler should not assume `GPIO_ODR` only changes when normal C++ code assigns to it.
+
+Simple explanation:
+
+```text
+volatile tells the compiler to actually read or write the variable because something outside normal code may change it.
+```
+
+---
+
+## Why is volatile used for registers?
+
+Hardware registers can change because of hardware events.
+
+Examples:
+
+```text
+GPIO input pin changes voltage
+UART receives data
+ADC conversion completes
+timer counter increments
+interrupt flag gets set
+CAN message arrives
+```
+
+The compiler might normally optimize repeated reads if it thinks a value has not changed.
+
+`volatile` prevents that optimization for the marked variable.
+
+Simple explanation:
+
+```text
+volatile is used for registers because hardware can change register values without normal C++ assignment.
+```
+
+---
+
+## GPIO register example
+
+Example:
+
+```cpp
+volatile std::uint32_t GPIO_ODR;
+
+GPIO_ODR |= (1U << 5);
+GPIO_ODR &= ~(1U << 5);
+```
+
+This simulates setting and clearing bit 5 of a GPIO output register.
+
+Meaning:
+
+```text
+set bit 5
+clear bit 5
+```
+
+This is similar to turning an LED pin on and off.
+
+---
+
+## Common volatile examples
+
+Common embedded uses:
+
+```text
+hardware registers
+ISR-shared flags
+memory-mapped peripheral registers
+status registers
+timer counters
+GPIO input/output registers
+```
+
+Example ISR-shared flag:
+
+```cpp
+volatile bool button_pressed = false;
+```
+
+An interrupt might set this flag, while the main loop reads it.
+
+---
+
+## Why is volatile not enough for thread safety?
+
+`volatile` does not make operations atomic.
+
+It does not prevent race conditions.
+
+Example:
+
+```cpp
+counter++;
+```
+
+This can involve multiple steps:
+
+```text
+read counter
+add one
+write counter
+```
+
+If an interrupt or another thread changes `counter` during those steps, the result can still be wrong.
+
+Simple explanation:
+
+```text
+volatile controls compiler optimization, but it does not protect shared data.
+```
+
+---
+
+## What should be used for thread safety?
+
+Depending on the system, thread safety may require:
+
+```text
+atomic variables
+mutexes
+critical sections
+interrupt disabling
+RTOS synchronization
+```
+
+`volatile` alone is not enough.
+
+---
+
+## Sensor-valid flags
+
+The `0x100` status byte contains sensor-valid flags.
+
+Masks:
+
+```cpp
+SENSOR1_VALID_MASK = 0x01
+SENSOR2_VALID_MASK = 0x02
+SENSOR3_VALID_MASK = 0x04
+```
+
+Meaning:
+
+```text
+bit 0 = sensor 1 valid
+bit 1 = sensor 2 valid
+bit 2 = sensor 3 valid
+```
+
+---
+
+## How do sensor-valid flags produce faults?
+
+If a sensor-valid bit is not set, that sensor is considered invalid.
+
+Example:
+
+```cpp
+if (!data.sensor1_valid) {
+    std::cout << "FAULT: Sensor 1 invalid" << std::endl;
+}
+```
+
+If status byte is:
+
+```text
+0x00 = 0000 0000
+```
+
+then no sensor-valid bits are set.
+
+So the output is:
+
+```text
+FAULT: Sensor 1 invalid
+FAULT: Sensor 2 invalid
+FAULT: Sensor 3 invalid
+```
+
+Simple explanation:
+
+```text
+Missing valid bits become sensor-invalid faults.
+```
+
+---
+
+## Sum of Two Integers
+
+LeetCode 371 asks me to add two integers without using `+` or `-`.
+
+The bit idea:
+
+```text
+XOR gives the sum without carry.
+AND gives the carry.
+Shift the carry left.
+Repeat until carry is zero.
+```
+
+Code idea:
+
+```cpp
+while (b != 0) {
+    unsigned carry = static_cast<unsigned>(a & b) << 1;
+    a = a ^ b;
+    b = static_cast<int>(carry);
+}
+```
+
+---
+
+## Why XOR helps with addition
+
+XOR behaves like addition without carry.
+
+Example:
+
+```text
+0 ^ 0 = 0
+1 ^ 0 = 1
+0 ^ 1 = 1
+1 ^ 1 = 0
+```
+
+The `1 ^ 1 = 0` case needs a carry.
+
+That carry is found using AND.
+
+---
+
+## Day 5 main interview idea
+
+```text
+volatile tells the compiler that a variable can change outside normal program flow, which is important for hardware registers and ISR-shared flags. It does not provide thread safety. In the CAN decoder, missing sensor-valid bits are interpreted as sensor faults and reported by FaultAnalyzer.
+```z
