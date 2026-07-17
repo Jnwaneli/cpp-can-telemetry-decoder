@@ -4924,3 +4924,336 @@ My answer:
 Reference answer:
 
 `constexpr` is useful for fixed masks because it gives meaningful names to compile-time constants. In the decoder, the raw status byte `0x07` is interpreted as individual sensor-valid flags, turning raw CAN payload data into readable system status.
+---
+
+# Week 4 Day 3 — XOR and FaultAnalyzer
+
+## What is XOR?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+XOR is a bitwise operation written with:
+
+```cpp
+^
+```
+
+It compares bits and outputs `1` when the bits are different.
+
+Simple version:
+
+```text
+XOR gives 1 when bits are different and 0 when bits are the same.
+```
+
+---
+
+## What does x ^ x equal?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+```text
+x ^ x = 0
+```
+
+A value XORed with itself cancels out.
+
+Simple version:
+
+```text
+Any number XOR itself becomes 0.
+```
+
+---
+
+## What does x ^ 0 equal?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+```text
+x ^ 0 = x
+```
+
+A value XORed with zero stays unchanged.
+
+Simple version:
+
+```text
+Any number XOR zero stays the same.
+```
+
+---
+
+## Why does XOR find the single number?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+XOR finds the single number because duplicate values cancel out.
+
+Example:
+
+```text
+4 ^ 1 ^ 2 ^ 1 ^ 2
+```
+
+The duplicate `1`s cancel.
+
+The duplicate `2`s cancel.
+
+The leftover value is `4`.
+
+Simple version:
+
+```text
+Pairs cancel out, and the unpaired number remains.
+```
+
+---
+
+## How does XOR help solve Missing Number?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+XOR all numbers from `0` to `n`.
+
+Then XOR all numbers in the array.
+
+Every number that appears in both places cancels out.
+
+The missing number remains.
+
+Simple version:
+
+```text
+XOR cancellation leaves the missing value behind.
+```
+
+---
+
+## How is XOR useful for toggling bits?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+XOR flips selected bits.
+
+Example:
+
+```cpp
+value ^= mask;
+```
+
+If the masked bit is `0`, it becomes `1`.
+
+If the masked bit is `1`, it becomes `0`.
+
+Simple version:
+
+```text
+XOR toggles bits by flipping them.
+```
+
+---
+
+## What is AnalogData?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`AnalogData` is a struct that stores decoded analog frame values.
+
+It can hold:
+
+```text
+AIN1 raw
+AIN2 raw
+AIN3 raw
+status byte
+counter
+sensor-valid flags
+error flag
+```
+
+Simple version:
+
+```text
+AnalogData stores meaningful decoded values from the 0x100 CAN frame.
+```
+
+---
+
+## What should a FaultAnalyzer class do?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A `FaultAnalyzer` should check decoded telemetry values against fault rules.
+
+Examples:
+
+```text
+sensor invalid
+analog value out of range
+battery voltage too low
+battery voltage too high
+temperature too high
+error flag set
+```
+
+Simple version:
+
+```text
+FaultAnalyzer checks decoded values and reports problems.
+```
+
+---
+
+## What should FaultAnalyzer not do?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`FaultAnalyzer` should not decode raw CAN bytes.
+
+That is the decoder's job.
+
+Simple version:
+
+```text
+FaultAnalyzer should analyze values, not parse raw bytes.
+```
+
+---
+
+## Why separate decoding from fault checking?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Decoding and fault checking are different responsibilities.
+
+```text
+TelemetryDecoder = turns raw bytes into meaningful values
+FaultAnalyzer = checks those values for problems
+```
+
+This makes the project cleaner, easier to test, easier to expand, and easier to explain.
+
+Simple version:
+
+```text
+Separation keeps each class focused on one job.
+```
+
+---
+
+## Week 4 Day 3 Core Interview Summary
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+XOR is useful because duplicate values cancel out, which solves problems like Single Number and Missing Number. In the CAN decoder project, `FaultAnalyzer` separates fault rules from byte decoding, so `TelemetryDecoder` converts raw CAN payloads into values while `FaultAnalyzer` checks those values for abnormal conditions.

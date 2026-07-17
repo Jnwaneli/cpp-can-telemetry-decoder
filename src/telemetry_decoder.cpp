@@ -1,5 +1,6 @@
 #include "telemetry_decoder.hpp"
 #include "bit_utils.hpp"
+#include "telemetry_data.hpp"
 
 #include <cstdint>
 #include <iomanip>
@@ -13,7 +14,8 @@ constexpr std::uint8_t ERROR_FLAG_MASK = 0x80;
 }
 
 TelemetryDecoder::TelemetryDecoder()
-    : frames_seen_(0) {
+    : fault_analyzer_(),
+      frames_seen_(0) {
 }
 
 void TelemetryDecoder::decode(const CanFrame& frame) {
@@ -57,48 +59,62 @@ void TelemetryDecoder::decode_0x100(const CanFrame& frame) {
     bool sensor3_valid = is_mask_set(status, SENSOR3_VALID_MASK);
     bool error_flag_set = is_mask_set(status, ERROR_FLAG_MASK);
 
+    AnalogData data{
+        ain1,
+        ain2,
+        ain3,
+        status,
+        counter,
+        sensor1_valid,
+        sensor2_valid,
+        sensor3_valid,
+        error_flag_set
+    };
+
     std::cout << "Type: Analog Inputs" << std::endl;
 
     std::cout << "AIN1_RAW: "
-              << ain1
+              << data.ain1_raw
               << std::endl;
 
     std::cout << "AIN2_RAW: "
-              << ain2
+              << data.ain2_raw
               << std::endl;
 
     std::cout << "AIN3_RAW: "
-              << ain3
+              << data.ain3_raw
               << std::endl;
 
     std::cout << "Status: 0x"
               << std::hex
               << std::setw(2)
               << std::setfill('0')
-              << static_cast<int>(status)
+              << static_cast<int>(data.status)
               << std::dec
               << std::setfill(' ')
               << std::endl;
 
     std::cout << "Sensor1_VALID: "
-              << (sensor1_valid ? "yes" : "no")
+              << (data.sensor1_valid ? "yes" : "no")
               << std::endl;
 
     std::cout << "Sensor2_VALID: "
-              << (sensor2_valid ? "yes" : "no")
+              << (data.sensor2_valid ? "yes" : "no")
               << std::endl;
 
     std::cout << "Sensor3_VALID: "
-              << (sensor3_valid ? "yes" : "no")
+              << (data.sensor3_valid ? "yes" : "no")
               << std::endl;
 
     std::cout << "Error_Flag: "
-              << (error_flag_set ? "yes" : "no")
+              << (data.error_flag_set ? "yes" : "no")
               << std::endl;
 
     std::cout << "Counter: "
-              << static_cast<int>(counter)
+              << static_cast<int>(data.counter)
               << std::endl;
+
+    fault_analyzer_.check_analog_faults(data);
 }
 
 void TelemetryDecoder::decode_0x101(const CanFrame& frame) {
@@ -141,4 +157,6 @@ void TelemetryDecoder::decode_0x101(const CanFrame& frame) {
               << std::defaultfloat
               << std::setprecision(6)
               << std::endl;
+
+    fault_analyzer_.check_battery_temp_faults(battery_V, temperature_C);
 }
