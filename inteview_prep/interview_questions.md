@@ -6437,3 +6437,344 @@ My answer:
 Reference answer:
 
 Recursion solves problems by breaking them into smaller versions of the same problem until a base case is reached. In the CAN project, `DecoderStats` summarizes frame processing results, while the CAN wiring plan explains how STM32 FDCAN logic connects through a transceiver to the physical CAN bus and then to the PC through a USB-CAN adapter.
+---
+
+# Week 5 Day 2 — Invert Tree and Wire CAN Bridge
+
+## Interview questions
+
+```text
+1. What did Invert Tree teach you about recursion?
+2. What is the base case in Invert Tree?
+3. Why does recursion fit binary trees well?
+4. What is DecoderStats responsible for?
+5. Why increment stats during frame processing?
+6. What is CAN termination?
+7. What resistance should you measure with two 120 ohm terminations?
+8. Why must CAN nodes share ground?
+9. Why does the STM32 need the SN65HVD230?
+10. What wiring mistake would break CAN?
+```
+
+---
+
+## What did Invert Tree teach you about recursion?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Invert Tree teaches that recursion works well when each part of a structure is a smaller version of the whole structure.
+
+Each subtree can be inverted the same way as the full tree.
+
+Simple version:
+
+```text
+Invert Tree shows that recursive logic can be applied to each smaller subtree.
+```
+
+---
+
+## What is the base case in Invert Tree?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The base case is:
+
+```cpp
+if (root == nullptr) {
+    return nullptr;
+}
+```
+
+If there is no node, there is nothing to invert.
+
+Simple version:
+
+```text
+The base case is an empty node.
+```
+
+---
+
+## Why does recursion fit binary trees well?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Recursion fits binary trees well because each child is the root of a smaller tree.
+
+That means the same function can solve the left subtree and right subtree.
+
+Simple version:
+
+```text
+A tree is made of smaller trees, so recursion matches its structure.
+```
+
+---
+
+## What is DecoderStats responsible for?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`DecoderStats` records high-level frame processing results.
+
+It tracks:
+
+```text
+total frames
+valid frames
+invalid DLC frames
+unknown ID frames
+fault count
+```
+
+Simple version:
+
+```text
+DecoderStats summarizes what happened during frame processing.
+```
+
+---
+
+## Why increment stats during frame processing?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Stats should update when each frame is checked so the final summary accurately reflects the decoder run.
+
+Example:
+
+```cpp
+stats.record_frame_received();
+
+if (!is_known_id(frame.id)) {
+    stats.record_unknown_id();
+}
+
+if (!has_valid_dlc(frame)) {
+    stats.record_invalid_dlc();
+}
+```
+
+Simple version:
+
+```text
+Stats are updated during processing so the final summary matches the actual frames.
+```
+
+---
+
+## What is CAN termination?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+CAN termination is a resistor placed across CANH and CANL at the ends of the CAN bus.
+
+The typical value is:
+
+```text
+120 ohms at each end
+```
+
+Termination reduces signal reflections.
+
+Simple version:
+
+```text
+Termination helps keep the CAN signal clean.
+```
+
+---
+
+## What resistance should you measure with two 120 ohm terminations?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+With power off, two 120 ohm terminations in parallel should measure about:
+
+```text
+60 ohms
+```
+
+Simple version:
+
+```text
+Two 120 ohm resistors in parallel measure about 60 ohms.
+```
+
+---
+
+## Why must CAN nodes share ground?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+CAN uses differential signaling, but the nodes still need a shared electrical reference.
+
+The NUCLEO, transceiver, and USB-CAN adapter should share ground.
+
+Simple version:
+
+```text
+Common ground helps devices agree on voltage levels.
+```
+
+---
+
+## Why does the STM32 need the SN65HVD230?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The STM32 FDCAN peripheral uses digital TX/RX logic signals.
+
+The CAN bus uses physical differential CANH/CANL signals.
+
+The SN65HVD230 converts between the two.
+
+Simple version:
+
+```text
+The transceiver converts STM32 logic signals into CAN bus signals.
+```
+
+---
+
+## What wiring mistake would break CAN?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Common wiring mistakes include:
+
+```text
+CANH and CANL swapped
+missing common ground
+missing termination
+too much termination
+wrong bitrate
+transceiver not powered
+wrong FDCAN pins selected
+STM32 TX/RX connected directly to CANH/CANL
+```
+
+Simple version:
+
+```text
+CAN breaks if the physical wiring, ground, termination, bitrate, or transceiver connection is wrong.
+```
+
+---
+
+## Week 5 Day 2 Core Interview Summary
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Invert Tree shows that recursion works well when a structure is made of smaller versions of itself. For CAN wiring, the STM32 does not connect directly to CANH/CANL. It uses a transceiver, shared ground, matching bitrate, and proper termination to communicate with a USB-CAN adapter and PC.

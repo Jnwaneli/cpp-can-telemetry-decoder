@@ -22,3 +22,15 @@ CANH/CANL bus
 Waveshare USB-CAN
         ↓
 PC
+
+## Power Safety Note
+
+The SN65HVD230 module should be powered from 3.3 V.
+
+Do not connect the SN65HVD230 VCC pin to 5 V unless the exact module documentation confirms that the module supports 5 V input.
+
+For this project, the planned connection is:
+
+```text
+NUCLEO 3.3 V -> SN65HVD230 VCC
+NUCLEO GND   -> SN65HVD230 GND

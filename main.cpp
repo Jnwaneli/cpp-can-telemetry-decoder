@@ -13,6 +13,14 @@
 #include "decoder_stats.hpp"
 #include "telemetry_decoder.hpp"
 
+int factorial(int n) {
+    if (n <= 1) {
+        return 1;
+    }
+
+    return n * factorial(n - 1);
+}
+
 void bitExperiment() {
     std::cout << "Bit experiment:" << std::endl;
 
@@ -82,16 +90,8 @@ void bitExperiment() {
 void recursionExperiment() {
     std::cout << "Recursion experiment:" << std::endl;
 
-    auto factorial = [](int n, auto&& self) -> int {
-        if (n <= 1) {
-            return 1;
-        }
-
-        return n * self(n - 1, self);
-    };
-
     std::cout << "factorial(5): "
-              << factorial(5, factorial)
+              << factorial(5)
               << std::endl;
 
     std::cout << std::endl;

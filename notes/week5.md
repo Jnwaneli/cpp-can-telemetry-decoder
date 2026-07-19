@@ -323,3 +323,279 @@ Termination helps the CAN signal stay clean.
 ```text
 Recursion solves problems by breaking them into smaller versions of the same problem until a base case is reached. In the CAN project, DecoderStats summarizes frame processing results, while the CAN wiring plan explains how STM32 FDCAN logic connects through a transceiver to the physical CAN bus and then to the PC through a USB-CAN adapter.
 ```
+---
+
+# Day 2 — Invert Tree and Wire CAN Bridge
+
+## Main goals
+
+```text
+Draw recursion stack diagrams.
+Solve Invert Binary Tree.
+Confirm DecoderStats increments during frame processing.
+Wire the CAN bridge between NUCLEO, SN65HVD230, Waveshare USB-CAN, and PC.
+Use a multimeter to check wiring.
+```
+
+---
+
+## Notes questions
+
+```text
+1. What did Invert Tree teach me about recursion?
+2. What is termination?
+3. Why must CAN nodes share ground?
+4. What wiring mistake would break CAN?
+```
+
+---
+
+## What did Invert Tree teach me about recursion?
+
+Invert Tree teaches that recursion works well on tree structures because each subtree is a smaller version of the whole tree.
+
+The function recursively inverts the left subtree and right subtree, then swaps them.
+
+Simple explanation:
+
+```text
+A tree is naturally recursive because every child is the root of a smaller tree.
+```
+
+---
+
+## Invert Tree recursion pattern
+
+LeetCode 226 uses this pattern:
+
+```cpp
+TreeNode* invertTree(TreeNode* root) {
+    if (root == nullptr) {
+        return nullptr;
+    }
+
+    TreeNode* left_subtree = invertTree(root->left);
+    TreeNode* right_subtree = invertTree(root->right);
+
+    root->left = right_subtree;
+    root->right = left_subtree;
+
+    return root;
+}
+```
+
+The base case is:
+
+```cpp
+if (root == nullptr) return nullptr;
+```
+
+The recursive case is:
+
+```cpp
+invertTree(root->left);
+invertTree(root->right);
+```
+
+---
+
+## Recursion stack diagram
+
+Example tree:
+
+```text
+    A
+   / \
+  B   C
+```
+
+Call stack idea:
+
+```text
+invertTree(A)
+    invertTree(B)
+        invertTree(nullptr)
+        invertTree(nullptr)
+        swap B's children
+    invertTree(C)
+        invertTree(nullptr)
+        invertTree(nullptr)
+        swap C's children
+    swap A's children
+```
+
+Simple explanation:
+
+```text
+The recursive calls go down the tree first, then swaps happen as the calls return.
+```
+
+---
+
+## DecoderStats increments
+
+The project now increments stats during frame processing.
+
+Conceptually:
+
+```cpp
+stats.record_frame_received();
+
+if (!is_known_id(frame.id)) {
+    stats.record_unknown_id();
+}
+
+if (!has_valid_dlc(frame)) {
+    stats.record_invalid_dlc();
+}
+```
+
+The project uses member functions instead of direct public increments because the stats fields are private.
+
+Simple explanation:
+
+```text
+DecoderStats records what happens to each frame as it is processed.
+```
+
+---
+
+## Current DecoderStats fields
+
+DecoderStats tracks:
+
+```text
+total frames
+valid frames
+invalid DLC frames
+unknown ID frames
+fault count
+```
+
+Example output:
+
+```text
+Decoder Stats:
+Total frames: 5
+Valid frames: 3
+Invalid DLC frames: 1
+Unknown ID frames: 1
+Fault count: 5
+```
+
+---
+
+## What is termination?
+
+Termination means placing resistors across CANH and CANL at the ends of the CAN bus.
+
+The typical value is:
+
+```text
+120 ohms at each end
+```
+
+If two 120 ohm terminations are installed, measuring CANH to CANL with power off should show about:
+
+```text
+60 ohms
+```
+
+Simple explanation:
+
+```text
+Termination helps prevent signal reflections on the CAN bus.
+```
+
+---
+
+## Why must CAN nodes share ground?
+
+CAN uses differential signaling between CANH and CANL, but the devices still need a shared electrical reference.
+
+The NUCLEO, SN65HVD230, and USB-CAN adapter should share ground.
+
+```text
+NUCLEO GND
+SN65HVD230 GND
+USB-CAN GND
+```
+
+Simple explanation:
+
+```text
+Common ground helps all devices agree on voltage levels.
+```
+
+---
+
+## CAN bridge wiring
+
+Planned wiring:
+
+```text
+NUCLEO FDCAN_TX -> SN65HVD230 TXD
+NUCLEO FDCAN_RX <- SN65HVD230 RXD
+NUCLEO 3.3 V    -> SN65HVD230 VCC
+NUCLEO GND      -> SN65HVD230 GND
+
+SN65HVD230 CANH -> CANH bus wire
+SN65HVD230 CANL -> CANL bus wire
+
+CANH bus wire   -> Waveshare CANH
+CANL bus wire   -> Waveshare CANL
+GND             -> Waveshare GND
+```
+
+---
+
+## Multimeter checks
+
+Before running CAN traffic, check:
+
+```text
+CANH continuity
+CANL continuity
+GND continuity
+3.3 V at the transceiver VCC pin
+termination resistance across CANH and CANL
+```
+
+Expected termination readings with power off:
+
+```text
+two 120 ohm terminations = about 60 ohms
+one 120 ohm termination = about 120 ohms
+no termination = open or very high resistance
+```
+
+---
+
+## What wiring mistake would break CAN?
+
+Common mistakes include:
+
+```text
+CANH and CANL swapped
+missing common ground
+missing termination
+too much termination
+wrong bitrate
+transceiver not powered
+wrong FDCAN pins selected
+connecting STM32 TX/RX directly to CANH/CANL
+```
+
+Simple explanation:
+
+```text
+CAN needs correct differential wiring, common ground, termination, matching bitrate, and a powered transceiver.
+```
+
+---
+
+## Day 2 main interview idea
+
+```text
+Invert Tree shows that recursion works well when a structure is made of smaller versions of itself. For the CAN hardware, the STM32 does not connect directly to CANH/CANL. It uses a transceiver, shared ground, matching bitrate, and proper termination to communicate with a USB-CAN adapter and PC.
+``` 
