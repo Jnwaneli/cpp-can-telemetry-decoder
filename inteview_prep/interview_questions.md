@@ -5611,3 +5611,829 @@ My answer:
 Reference answer:
 
 `volatile` tells the compiler that a variable can change outside normal program flow, which is important for hardware registers and ISR-shared flags. It does not provide thread safety. In the CAN decoder, missing sensor-valid bits are interpreted as sensor faults and reported by `FaultAnalyzer`.
+---
+
+# Week 4 Day 6 — Fault Rules Documentation and Week 4 Review
+
+## Interview questions
+
+```text
+1. What is a bit mask?
+2. How do you set a bit?
+3. How do you clear a bit?
+4. How do you check a bit?
+5. What is XOR useful for?
+6. What is volatile?
+7. Is volatile thread-safe?
+8. Why does fault detection come after decoding?
+9. Why are status flags useful in CAN messages?
+10. What does constexpr do?
+```
+
+---
+
+## What is a bit mask?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A bit mask is a value used to target one or more specific bits.
+
+Example:
+
+```cpp
+std::uint8_t mask = 0x04;
+```
+
+Binary:
+
+```text
+0x04 = 0000 0100
+```
+
+A mask lets code isolate, set, clear, toggle, or check selected bits.
+
+Simple version:
+
+```text
+A bit mask lets me work with specific bits inside a value.
+```
+
+---
+
+## How do you set a bit?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Use bitwise OR.
+
+```cpp
+value |= mask;
+```
+
+This forces the selected bit to become `1`.
+
+Example:
+
+```text
+value = 0000 0000
+mask  = 0000 0100
+
+result = 0000 0100
+```
+
+Simple version:
+
+```text
+Set means force a bit to 1.
+```
+
+---
+
+## How do you clear a bit?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Use bitwise AND with the inverted mask.
+
+```cpp
+value &= ~mask;
+```
+
+This forces the selected bit to become `0`.
+
+Example:
+
+```text
+value = 0000 0100
+mask  = 0000 0100
+~mask = 1111 1011
+
+result = 0000 0000
+```
+
+Simple version:
+
+```text
+Clear means force a bit to 0.
+```
+
+---
+
+## How do you check a bit?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Use bitwise AND.
+
+```cpp
+(value & mask) != 0
+```
+
+If the result is not zero, the selected bit is set.
+
+Example:
+
+```text
+value = 0000 0100
+mask  = 0000 0100
+
+value & mask = 0000 0100
+```
+
+Simple version:
+
+```text
+Checking a bit means testing whether a specific bit is 1.
+```
+
+---
+
+## What is XOR useful for?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+XOR is useful for toggling bits and solving cancellation problems.
+
+Important rules:
+
+```text
+x ^ x = 0
+x ^ 0 = x
+```
+
+Examples:
+
+```text
+toggle a bit
+find the single number
+find a missing number
+combine bitwise addition without carry
+```
+
+Simple version:
+
+```text
+XOR is useful when matching pairs should cancel out or when bits need to flip.
+```
+
+---
+
+## What is volatile?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`volatile` tells the compiler that a value can change outside normal program flow.
+
+Common examples:
+
+```text
+hardware registers
+ISR-shared flags
+status registers
+GPIO registers
+timer counters
+```
+
+Simple version:
+
+```text
+volatile tells the compiler not to assume the value stays unchanged.
+```
+
+---
+
+## Is volatile thread-safe?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+No.
+
+`volatile` is not thread-safe.
+
+It does not make operations atomic and does not protect against race conditions.
+
+Example:
+
+```cpp
+counter++;
+```
+
+This still has multiple steps:
+
+```text
+read
+modify
+write
+```
+
+An interrupt or another thread could interfere between those steps.
+
+Simple version:
+
+```text
+volatile controls compiler optimization, not data safety.
+```
+
+---
+
+## Why does fault detection come after decoding?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Fault detection comes after decoding because fault rules depend on meaningful values.
+
+Examples:
+
+```text
+battery bytes must become volts
+temperature bytes must become Celsius
+status bytes must become flags
+```
+
+The program must decode raw CAN payload bytes before it can apply fault rules.
+
+Simple version:
+
+```text
+The program must understand the bytes before it can judge whether they are faulty.
+```
+
+---
+
+## Why are status flags useful in CAN messages?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Status flags are useful because they pack many true/false conditions into one byte.
+
+Examples:
+
+```text
+sensor valid
+low voltage
+overtemperature
+communication fault
+error active
+mode bit
+```
+
+This is efficient for embedded systems because CAN payload space is limited.
+
+Simple version:
+
+```text
+Status flags are compact and efficient for embedded messages.
+```
+
+---
+
+## What does constexpr do?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`constexpr` creates a compile-time constant.
+
+It is useful for fixed values like:
+
+```text
+bit masks
+CAN IDs
+array sizes
+limits
+thresholds
+```
+
+Example:
+
+```cpp
+constexpr std::uint8_t SENSOR1_VALID_MASK = 0x01;
+```
+
+Simple version:
+
+```text
+constexpr gives a meaningful name to a value known at compile time.
+```
+
+---
+
+## Week 4 Core Interview Summary
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Week 4 focused on bit manipulation and fault detection. I learned how to use masks to set, clear, toggle, and check bits. I used `constexpr` masks to interpret CAN status bytes, decoded status frame `0x102`, and created a `FaultAnalyzer` to separate fault checking from byte decoding. I also learned that `volatile` is important for hardware registers but does not provide thread safety.
+---
+
+# Week 5 Day 1 — Recursion, DecoderStats, and CAN Wiring
+
+## Interview questions
+
+```text
+1. What is recursion?
+2. What is a base case?
+3. What is a recursive case?
+4. What is the call stack?
+5. How does Maximum Depth of Binary Tree use recursion?
+6. What is DecoderStats?
+7. Why track decoder statistics?
+8. What is CANH/CANL?
+9. Why does CAN need a transceiver?
+10. Why does the PC need a USB-CAN adapter?
+11. Why does CAN wiring need common ground?
+12. Why does CAN need 120 ohm termination?
+```
+
+---
+
+## What is recursion?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Recursion is when a function calls itself to solve a smaller version of the same problem.
+
+Example:
+
+```cpp
+int factorial(int n) {
+    if (n <= 1) return 1;
+    return n * factorial(n - 1);
+}
+```
+
+Simple version:
+
+```text
+Recursion means a function solves a problem by calling itself on a smaller problem.
+```
+
+---
+
+## What is a base case?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A base case is the condition that stops recursion.
+
+Example:
+
+```cpp
+if (n <= 1) return 1;
+```
+
+Without a base case, recursion would continue forever.
+
+Simple version:
+
+```text
+The base case is the stopping condition.
+```
+
+---
+
+## What is a recursive case?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The recursive case is where the function calls itself.
+
+Example:
+
+```cpp
+return n * factorial(n - 1);
+```
+
+This reduces the problem from `n` to `n - 1`.
+
+Simple version:
+
+```text
+The recursive case keeps breaking the problem into smaller pieces.
+```
+
+---
+
+## What is the call stack?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The call stack stores unfinished function calls.
+
+In recursion, each recursive call is placed on the call stack until the base case is reached.
+
+Then the calls return back up.
+
+Simple version:
+
+```text
+The call stack keeps track of recursive function calls that are waiting to finish.
+```
+
+---
+
+## How does Maximum Depth of Binary Tree use recursion?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Maximum Depth of Binary Tree uses recursion by finding the depth of the left subtree and the right subtree.
+
+Then it returns:
+
+```cpp
+1 + max(left_depth, right_depth)
+```
+
+The base case is:
+
+```cpp
+if (root == nullptr) return 0;
+```
+
+Simple version:
+
+```text
+The function asks each subtree for its depth, then adds 1 for the current node.
+```
+
+---
+
+## What is DecoderStats?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`DecoderStats` tracks high-level decoder results.
+
+It tracks:
+
+```text
+total frames
+valid frames
+invalid DLC frames
+unknown ID frames
+fault count
+```
+
+Simple version:
+
+```text
+DecoderStats summarizes what happened while processing CAN frames.
+```
+
+---
+
+## Why track decoder statistics?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Decoder statistics make the tool more useful because they summarize the whole run.
+
+Example:
+
+```text
+Decoder Stats:
+Total frames: 5
+Valid frames: 3
+Invalid DLC frames: 1
+Unknown ID frames: 1
+Fault count: 5
+```
+
+Simple version:
+
+```text
+Stats turn individual frame logs into a useful diagnostic summary.
+```
+
+---
+
+## What is CANH/CANL?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+CANH and CANL are the two physical CAN bus wires.
+
+```text
+CANH = CAN high
+CANL = CAN low
+```
+
+CAN uses the voltage difference between these two wires to transmit data.
+
+Simple version:
+
+```text
+CANH and CANL are the differential signal wires of the CAN bus.
+```
+
+---
+
+## Why does CAN need a transceiver?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The STM32 FDCAN peripheral produces digital TX/RX logic signals.
+
+The CAN bus uses differential CANH/CANL physical signals.
+
+A transceiver converts between the two.
+
+Simple version:
+
+```text
+The transceiver converts microcontroller logic into physical CAN bus signals.
+```
+
+---
+
+## Why does the PC need a USB-CAN adapter?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A normal PC does not directly connect to CANH/CANL.
+
+The USB-CAN adapter converts CAN bus traffic into USB communication that the PC can read.
+
+Simple version:
+
+```text
+The USB-CAN adapter lets the PC send, receive, and log CAN frames.
+```
+
+---
+
+## Why does CAN wiring need common ground?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The STM32 board, CAN transceiver, and USB-CAN adapter should share a common ground.
+
+Common ground gives all devices the same electrical reference.
+
+Simple version:
+
+```text
+Common ground helps devices agree on voltage levels.
+```
+
+---
+
+## Why does CAN need 120 ohm termination?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A CAN bus normally needs 120 ohm termination at both ends of the bus.
+
+Termination reduces signal reflections and helps keep communication reliable.
+
+Simple version:
+
+```text
+Termination helps keep the CAN signal clean.
+```
+
+---
+
+## Week 5 Day 1 Core Interview Summary
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Recursion solves problems by breaking them into smaller versions of the same problem until a base case is reached. In the CAN project, `DecoderStats` summarizes frame processing results, while the CAN wiring plan explains how STM32 FDCAN logic connects through a transceiver to the physical CAN bus and then to the PC through a USB-CAN adapter.

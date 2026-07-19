@@ -10,6 +10,7 @@
 #include "can_frame.hpp"
 #include "can_validation.hpp"
 #include "circular_buffer.hpp"
+#include "decoder_stats.hpp"
 #include "telemetry_decoder.hpp"
 
 void bitExperiment() {
@@ -73,6 +74,24 @@ void bitExperiment() {
 
     std::cout << "Error mask set? "
               << (is_mask_set(status, error_mask) ? "yes" : "no")
+              << std::endl;
+
+    std::cout << std::endl;
+}
+
+void recursionExperiment() {
+    std::cout << "Recursion experiment:" << std::endl;
+
+    auto factorial = [](int n, auto&& self) -> int {
+        if (n <= 1) {
+            return 1;
+        }
+
+        return n * self(n - 1, self);
+    };
+
+    std::cout << "factorial(5): "
+              << factorial(5, factorial)
               << std::endl;
 
     std::cout << std::endl;
@@ -164,7 +183,9 @@ void print_frame_header(const CanFrame& frame) {
     print_payload(frame);
 }
 
-void process_frame(const CanFrame& frame, TelemetryDecoder& decoder) {
+void process_frame(const CanFrame& frame, TelemetryDecoder& decoder, DecoderStats& stats) {
+    stats.record_frame_received();
+
     std::cout << "------------------------------" << std::endl;
 
     print_frame_header(frame);
@@ -173,10 +194,12 @@ void process_frame(const CanFrame& frame, TelemetryDecoder& decoder) {
 
     if (!is_known_id(frame.id)) {
         faults.push_back("Unknown CAN ID");
+        stats.record_unknown_id();
     }
 
     if (!has_valid_dlc(frame)) {
         faults.push_back("Invalid DLC");
+        stats.record_invalid_dlc();
     }
 
     if (!faults.empty()) {
@@ -189,7 +212,16 @@ void process_frame(const CanFrame& frame, TelemetryDecoder& decoder) {
         return;
     }
 
-    decoder.decode(frame);
+    stats.record_valid_frame();
+
+    std::size_t decoded_faults = decoder.decode(frame);
+    stats.add_faults(decoded_faults);
+
+    if (decoded_faults > 0) {
+        std::cout << "Decoded Faults: "
+                  << decoded_faults
+                  << std::endl;
+    }
 
     std::cout << "Frame Validation: OK" << std::endl;
 }
@@ -220,13 +252,15 @@ void load_frames_into_buffer(const std::vector<CanFrame>& log, CircularBuffer& r
     std::cout << std::endl;
 }
 
-void process_buffered_frames(CircularBuffer& rx_buffer, TelemetryDecoder& decoder) {
+void process_buffered_frames(CircularBuffer& rx_buffer,
+                             TelemetryDecoder& decoder,
+                             DecoderStats& stats) {
     std::cout << "Processing buffered CAN frames:" << std::endl;
 
     CanFrame frame{};
 
     while (rx_buffer.pop(frame)) {
-        process_frame(frame, decoder);
+        process_frame(frame, decoder, stats);
     }
 
     std::cout << "------------------------------" << std::endl;
@@ -238,6 +272,7 @@ void process_buffered_frames(CircularBuffer& rx_buffer, TelemetryDecoder& decode
 
 int main() {
     bitExperiment();
+    recursionExperiment();
     arrayExperiment();
 
     std::vector<CanFrame> simulated_log = {
@@ -257,13 +292,16 @@ int main() {
 
     CircularBuffer rx_buffer;
     TelemetryDecoder decoder;
+    DecoderStats stats;
 
     load_frames_into_buffer(simulated_log, rx_buffer);
-    process_buffered_frames(rx_buffer, decoder);
+    process_buffered_frames(rx_buffer, decoder, stats);
 
     std::cout << "Decoder frames seen: "
               << decoder.frames_seen()
               << std::endl;
+
+    stats.print();
 
     return 0;
 }

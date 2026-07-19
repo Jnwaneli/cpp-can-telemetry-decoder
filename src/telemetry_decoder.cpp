@@ -18,25 +18,22 @@ TelemetryDecoder::TelemetryDecoder()
       frames_seen_(0) {
 }
 
-void TelemetryDecoder::decode(const CanFrame& frame) {
+std::size_t TelemetryDecoder::decode(const CanFrame& frame) {
     frames_seen_++;
 
     switch (frame.id) {
         case 0x100:
-            decode_0x100(frame);
-            break;
+            return decode_0x100(frame);
 
         case 0x101:
-            decode_0x101(frame);
-            break;
+            return decode_0x101(frame);
 
         case 0x102:
-            decode_0x102(frame);
-            break;
+            return decode_0x102(frame);
 
         default:
             std::cout << "Type: Known frame, decoder not implemented yet" << std::endl;
-            break;
+            return 0;
     }
 }
 
@@ -44,11 +41,11 @@ std::size_t TelemetryDecoder::frames_seen() const {
     return frames_seen_;
 }
 
-void TelemetryDecoder::decode_0x100(const CanFrame& frame) {
+std::size_t TelemetryDecoder::decode_0x100(const CanFrame& frame) {
     if (frame.dlc < 8) {
         std::cout << "Type: Analog Inputs" << std::endl;
         std::cout << "Result: FAULT - Invalid DLC for 0x100 decoder" << std::endl;
-        return;
+        return 1;
     }
 
     std::uint16_t ain1 = pack_u16(frame.data[0], frame.data[1]);
@@ -118,14 +115,14 @@ void TelemetryDecoder::decode_0x100(const CanFrame& frame) {
               << static_cast<int>(data.counter)
               << std::endl;
 
-    fault_analyzer_.check_analog_faults(data);
+    return fault_analyzer_.check_analog_faults(data);
 }
 
-void TelemetryDecoder::decode_0x101(const CanFrame& frame) {
+std::size_t TelemetryDecoder::decode_0x101(const CanFrame& frame) {
     if (frame.dlc < 8) {
         std::cout << "Type: Battery and Temperature" << std::endl;
         std::cout << "Result: FAULT - Invalid DLC for 0x101 decoder" << std::endl;
-        return;
+        return 1;
     }
 
     std::uint16_t battery_mV = pack_u16(frame.data[0], frame.data[1]);
@@ -162,14 +159,14 @@ void TelemetryDecoder::decode_0x101(const CanFrame& frame) {
               << std::setprecision(6)
               << std::endl;
 
-    fault_analyzer_.check_battery_temp_faults(battery_V, temperature_C);
+    return fault_analyzer_.check_battery_temp_faults(battery_V, temperature_C);
 }
 
-void TelemetryDecoder::decode_0x102(const CanFrame& frame) {
+std::size_t TelemetryDecoder::decode_0x102(const CanFrame& frame) {
     if (frame.dlc < 8) {
         std::cout << "Type: Status Flags" << std::endl;
         std::cout << "Result: FAULT - Invalid DLC for 0x102 decoder" << std::endl;
-        return;
+        return 1;
     }
 
     std::uint8_t sensor_valid_flags = frame.data[0];
@@ -213,4 +210,6 @@ void TelemetryDecoder::decode_0x102(const CanFrame& frame) {
     std::cout << "Error Code: "
               << static_cast<int>(error_code)
               << std::endl;
+
+    return 0;
 }

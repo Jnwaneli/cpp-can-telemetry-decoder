@@ -1534,4 +1534,373 @@ That carry is found using AND.
 
 ```text
 volatile tells the compiler that a variable can change outside normal program flow, which is important for hardware registers and ISR-shared flags. It does not provide thread safety. In the CAN decoder, missing sensor-valid bits are interpreted as sensor faults and reported by FaultAnalyzer.
-```z
+```
+---
+
+---
+
+# Day 6 — Fault Rules Documentation and Review
+
+## Main goals
+
+```text
+Review Number of 1 Bits.
+Review Single Number.
+Create docs/fault_rules.md.
+Document current fault rules.
+Review Week 4 bit manipulation concepts.
+```
+
+---
+
+## Notes questions
+
+```text
+1. What fault rules does this project currently support?
+2. Why document fault rules?
+3. Why does fault detection come after decoding?
+4. How did Number of 1 Bits work?
+5. Why does XOR solve Single Number?
+```
+
+---
+
+## What fault rules does this project currently support?
+
+The project currently supports:
+
+```text
+Unknown ID
+Invalid DLC
+Sensor invalid
+Voltage low
+Voltage high
+Temperature high
+```
+
+These rules are documented in:
+
+```text
+docs/fault_rules.md
+```
+
+Simple explanation:
+
+```text
+The project checks both frame-level problems and decoded telemetry problems.
+```
+
+---
+
+## Unknown ID
+
+A frame has an unknown ID if its CAN ID is not recognized by the decoder.
+
+Supported IDs:
+
+```text
+0x100
+0x101
+0x102
+0x200
+```
+
+Rule:
+
+```text
+Any frame not in {0x100, 0x101, 0x102, 0x200}
+```
+
+Result:
+
+```text
+FAULT: Unknown CAN ID
+```
+
+---
+
+## Invalid DLC
+
+A frame has an invalid DLC if it is a supported frame but its DLC is not 8.
+
+Rule:
+
+```text
+Any supported frame where DLC != 8
+```
+
+In this project, supported CAN frames are expected to use 8 data bytes.
+
+Result:
+
+```text
+FAULT: Invalid DLC
+```
+
+---
+
+## Sensor invalid
+
+Sensor-valid flags are stored in a status byte.
+
+Masks:
+
+```text
+SENSOR1_VALID_MASK = 0x01
+SENSOR2_VALID_MASK = 0x02
+SENSOR3_VALID_MASK = 0x04
+```
+
+Meaning:
+
+```text
+bit 0 = sensor 1 valid
+bit 1 = sensor 2 valid
+bit 2 = sensor 3 valid
+```
+
+If a required sensor-valid bit is not set, that sensor is considered invalid.
+
+Example:
+
+```text
+Status byte: 0x00
+Binary: 0000 0000
+```
+
+Result:
+
+```text
+FAULT: Sensor 1 invalid
+FAULT: Sensor 2 invalid
+FAULT: Sensor 3 invalid
+```
+
+---
+
+## Voltage low
+
+Battery voltage comes from CAN ID `0x101`.
+
+Scaling:
+
+```text
+battery_V = battery_mV / 1000.0
+```
+
+Rule:
+
+```text
+battery < 10.5 V
+```
+
+Result:
+
+```text
+FAULT: Battery voltage too low
+```
+
+---
+
+## Voltage high
+
+Battery voltage comes from CAN ID `0x101`.
+
+Rule:
+
+```text
+battery > 14.8 V
+```
+
+Result:
+
+```text
+FAULT: Battery voltage too high
+```
+
+---
+
+## Temperature high
+
+Temperature comes from CAN ID `0x101`.
+
+Scaling:
+
+```text
+temperature_C = temperature_deciC / 10.0
+```
+
+Rule:
+
+```text
+temperature > 80 C
+```
+
+Result:
+
+```text
+FAULT: Temperature too high
+```
+
+---
+
+## Why document fault rules?
+
+Documenting fault rules makes the project easier to understand, test, and explain.
+
+It also makes the project feel more like a real diagnostic tool.
+
+Instead of saying:
+
+```text
+The program prints faults.
+```
+
+A better explanation is:
+
+```text
+The project defines documented fault rules for unknown IDs, invalid DLC, sensor validity, voltage limits, and temperature limits.
+```
+
+Simple explanation:
+
+```text
+Fault rules explain exactly why the program reports a fault.
+```
+
+---
+
+## Why does fault detection come after decoding?
+
+Fault detection comes after decoding because fault rules usually depend on interpreted values.
+
+Examples:
+
+```text
+battery_mV must be converted to volts
+temperature_deciC must be converted to Celsius
+status bytes must be interpreted as flags
+```
+
+The raw bytes alone are not always meaningful until the decoder converts them.
+
+Simple explanation:
+
+```text
+The program must know what the bytes mean before it can decide if they are faulty.
+```
+
+---
+
+## Number of 1 Bits review
+
+Number of 1 Bits counts how many bits are set to `1`.
+
+Simple idea:
+
+```cpp
+while (n != 0) {
+    count += n & 1;
+    n >>= 1;
+}
+```
+
+Meaning:
+
+```text
+n & 1 checks the lowest bit
+n >>= 1 shifts to the next bit
+```
+
+Example:
+
+```text
+11 decimal = 1011 binary
+```
+
+There are three `1` bits.
+
+---
+
+## Faster Number of 1 Bits trick
+
+The faster trick is:
+
+```cpp
+n &= (n - 1);
+```
+
+This removes the lowest set bit.
+
+Each loop removes one `1`.
+
+So the number of loops equals the number of set bits.
+
+Simple explanation:
+
+```text
+n & (n - 1) clears the lowest 1 bit.
+```
+
+---
+
+## Single Number review
+
+Single Number uses XOR.
+
+Important rules:
+
+```text
+x ^ x = 0
+x ^ 0 = x
+```
+
+Duplicate values cancel out.
+
+The single value remains.
+
+Example:
+
+```text
+4 ^ 1 ^ 2 ^ 1 ^ 2
+```
+
+The `1`s cancel.
+
+The `2`s cancel.
+
+The leftover value is `4`.
+
+---
+
+## Why does XOR solve Single Number?
+
+XOR solves Single Number because every duplicate pair cancels out.
+
+Since:
+
+```text
+x ^ x = 0
+```
+
+and:
+
+```text
+x ^ 0 = x
+```
+
+the only value left after XORing the full array is the value that appeared once.
+
+Simple explanation:
+
+```text
+Pairs cancel out, and the unpaired number remains.
+```
+
+---
+
+## Day 6 main interview idea
+
+```text
+Fault detection should be documented and separated from decoding. The decoder converts raw CAN bytes into meaningful values, and the fault analyzer checks those values against clear rules such as invalid sensors, voltage limits, and temperature limits.
+```
