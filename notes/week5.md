@@ -863,3 +863,247 @@ The first hardware test sends the same kind of analog input frame that the deskt
 ```text
 Recursive comparison works by checking matching or mirrored nodes and then applying the same logic to smaller subtrees. On the hardware side, STM32 FDCAN must be configured with the correct pins, bitrate, frame type, ID, and payload format so it can transmit frame 0x100 through the CAN transceiver to the USB-CAN adapter.
 ```
+---
+
+# Day 4 — BFS and Send First CAN Frame
+
+## Main goals
+
+```text
+Learn BFS with a queue.
+Solve Binary Tree Level Order Traversal.
+Confirm temperature high fault rule.
+Transmit CAN frame 0x100 from STM32 every 100 ms.
+Try receiving the frame on the PC through Waveshare USB-CAN.
+```
+
+---
+
+## Notes questions
+
+```text
+1. What is BFS?
+2. Why does BFS use a queue?
+3. What did I transmit over CAN?
+4. Did the PC receive it?
+5. If not, what did I check?
+```
+
+---
+
+## What is BFS?
+
+BFS means Breadth-First Search.
+
+BFS visits nodes level by level.
+
+For a binary tree:
+
+```text
+Level 0: root
+Level 1: root's children
+Level 2: grandchildren
+```
+
+Simple explanation:
+
+```text
+BFS explores everything at the current level before moving deeper.
+```
+
+---
+
+## Why does BFS use a queue?
+
+BFS uses a queue because a queue is first in, first out.
+
+That means the first node discovered is the first node processed.
+
+This keeps traversal level-by-level.
+
+Simple explanation:
+
+```text
+A queue preserves the order nodes are discovered, which is what BFS needs.
+```
+
+---
+
+## Binary Tree Level Order Traversal
+
+LeetCode 102 uses BFS.
+
+Code idea:
+
+```cpp
+vector<vector<int>> levelOrder(TreeNode* root) {
+    vector<vector<int>> result;
+
+    if (root == nullptr) {
+        return result;
+    }
+
+    queue<TreeNode*> q;
+    q.push(root);
+
+    while (!q.empty()) {
+        int level_size = q.size();
+        vector<int> level;
+
+        for (int i = 0; i < level_size; i++) {
+            TreeNode* current = q.front();
+            q.pop();
+
+            level.push_back(current->val);
+
+            if (current->left != nullptr) {
+                q.push(current->left);
+            }
+
+            if (current->right != nullptr) {
+                q.push(current->right);
+            }
+        }
+
+        result.push_back(level);
+    }
+
+    return result;
+}
+```
+
+The important line is:
+
+```cpp
+int level_size = q.size();
+```
+
+That captures how many nodes are in the current level before adding the next level.
+
+---
+
+## Temperature high fault
+
+The `FaultAnalyzer` checks decoded temperature after CAN ID `0x101` is decoded.
+
+Rule:
+
+```text
+temperature > 80 C = high temperature fault
+```
+
+Output:
+
+```text
+FAULT: Temperature too high
+```
+
+Simple explanation:
+
+```text
+The decoder converts temperature_deciC to Celsius, then FaultAnalyzer checks if it is above 80 C.
+```
+
+---
+
+## What did I transmit over CAN?
+
+The STM32 transmitted a standard CAN frame.
+
+```text
+ID: 0x100
+DLC: 8
+Data: 00 08 10 00 FF 0A 07 01
+```
+
+Decoded meaning:
+
+```text
+AIN1_RAW = 2048
+AIN2_RAW = 16
+AIN3_RAW = 2815
+Status = 0x07
+Counter = 1
+```
+
+Simple explanation:
+
+```text
+I transmitted the analog input frame that the desktop decoder already understands.
+```
+
+---
+
+## CAN transmit period
+
+The STM32 sends the frame every:
+
+```text
+100 ms
+```
+
+This means the PC should receive about:
+
+```text
+10 frames per second
+```
+
+Simple explanation:
+
+```text
+A 100 ms delay creates a repeating CAN test frame.
+```
+
+---
+
+## Did the PC receive it?
+
+The expected receive frame is:
+
+```text
+0x100   8   00 08 10 00 FF 0A 07 01
+```
+
+Record the result:
+
+```text
+PC receive result:
+[Write YES or NO here]
+```
+
+If the frame appears repeatedly in the Waveshare USB-CAN receive window, the basic CAN transmit path is working.
+
+---
+
+## If not, what did I check?
+
+If the PC did not receive the CAN frame, check:
+
+```text
+STM32 bitrate
+Waveshare bitrate
+FDCAN_TX to TXD
+FDCAN_RX to RXD
+CANH to CANH
+CANL to CANL
+common ground
+3.3 V power to transceiver
+termination across CANH/CANL
+CANH/CANL swapped
+transceiver standby/silent mode
+whether STM32 code reaches the while loop
+```
+
+Simple explanation:
+
+```text
+CAN receive problems usually come from bitrate mismatch, wiring mistakes, missing ground, missing termination, or transceiver configuration.
+```
+
+---
+
+## Day 4 main interview idea
+
+```text
+BFS uses a queue to process nodes in the order they are discovered, which allows level-by-level traversal. On the hardware side, the STM32 sends standard CAN frame 0x100 every 100 ms through the transceiver, and the PC should receive it through the Waveshare USB-CAN adapter if bitrate, wiring, ground, and termination are correct.
+```

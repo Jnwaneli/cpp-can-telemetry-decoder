@@ -7162,3 +7162,350 @@ My answer:
 Reference answer:
 
 Recursive comparison works by checking two current nodes and then applying the same logic to smaller subtree pairs. Same Tree compares matching branches, while Symmetric Tree compares mirrored branches. On the hardware side, STM32 FDCAN must be configured with matching bitrate, correct TX/RX pins, standard ID format, DLC 8, and a first transmit frame of `0x100` with payload `00 08 10 00 FF 0A 07 01`.
+---
+
+# Week 5 Day 4 — BFS and Send First CAN Frame
+
+## Interview questions
+
+```text
+1. What is BFS?
+2. Why does BFS use a queue?
+3. What problem does Level Order Traversal solve?
+4. Why do we store level_size before the for loop?
+5. What is the temperature high fault rule?
+6. Why does temperature fault checking happen after decoding?
+7. What CAN frame did you transmit from STM32?
+8. How often did the STM32 transmit the frame?
+9. What should the PC receive?
+10. If the PC does not receive the frame, what should you check?
+```
+
+---
+
+## What is BFS?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+BFS means Breadth-First Search.
+
+It visits nodes level by level before going deeper.
+
+Simple version:
+
+```text
+BFS explores the current level before the next level.
+```
+
+---
+
+## Why does BFS use a queue?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+BFS uses a queue because a queue is first in, first out.
+
+The first node discovered is the first node processed.
+
+Simple version:
+
+```text
+A queue keeps nodes in discovery order.
+```
+
+---
+
+## What problem does Level Order Traversal solve?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Level Order Traversal returns the values of a binary tree grouped by level.
+
+Example output:
+
+```text
+[
+  [3],
+  [9, 20],
+  [15, 7]
+]
+```
+
+Simple version:
+
+```text
+It reads a tree from top to bottom, level by level.
+```
+
+---
+
+## Why do we store level_size before the for loop?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+We store `level_size` because the queue changes while processing the current level.
+
+As nodes are processed, their children are added to the queue.
+
+`level_size` tells us how many nodes belong to the current level before adding the next level.
+
+Simple version:
+
+```text
+level_size separates the current level from the next level.
+```
+
+---
+
+## What is the temperature high fault rule?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The temperature high fault rule is:
+
+```text
+temperature > 80 C = high temperature fault
+```
+
+Output:
+
+```text
+FAULT: Temperature too high
+```
+
+Simple version:
+
+```text
+Temperature above 80 C is reported as a fault.
+```
+
+---
+
+## Why does temperature fault checking happen after decoding?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Temperature fault checking happens after decoding because the raw CAN bytes must be converted into Celsius first.
+
+The decoder converts:
+
+```text
+temperature_deciC -> temperature_C
+```
+
+Then the fault analyzer checks whether the value is above 80 C.
+
+Simple version:
+
+```text
+The program must convert the raw bytes into Celsius before checking the limit.
+```
+
+---
+
+## What CAN frame did you transmit from STM32?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The STM32 transmitted standard CAN frame:
+
+```text
+ID: 0x100
+DLC: 8
+Data: 00 08 10 00 FF 0A 07 01
+```
+
+Simple version:
+
+```text
+The STM32 transmitted the 0x100 analog input frame.
+```
+
+---
+
+## How often did the STM32 transmit the frame?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The STM32 transmitted the frame every:
+
+```text
+100 ms
+```
+
+That is about 10 frames per second.
+
+Simple version:
+
+```text
+The STM32 sends the test frame every 100 ms.
+```
+
+---
+
+## What should the PC receive?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The PC should receive:
+
+```text
+ID: 0x100
+DLC: 8
+Data: 00 08 10 00 FF 0A 07 01
+```
+
+The frame should repeat about every 100 ms in the Waveshare USB-CAN receive window.
+
+Simple version:
+
+```text
+The PC should see repeated 0x100 frames with the expected 8-byte payload.
+```
+
+---
+
+## If the PC does not receive the frame, what should you check?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Check:
+
+```text
+STM32 bitrate
+Waveshare bitrate
+FDCAN_TX to TXD
+FDCAN_RX to RXD
+CANH to CANH
+CANL to CANL
+common ground
+3.3 V power to transceiver
+termination across CANH/CANL
+CANH/CANL swapped
+transceiver standby/silent mode
+whether STM32 code reaches the while loop
+```
+
+Simple version:
+
+```text
+Check bitrate, wiring, ground, termination, power, transceiver mode, and firmware execution.
+```
+
+---
+
+## Week 5 Day 4 Core Interview Summary
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+BFS uses a queue to process nodes in the order they are discovered, which allows level-by-level traversal. On the hardware side, the STM32 sends standard CAN frame `0x100` every 100 ms through the transceiver, and the PC should receive it through the Waveshare USB-CAN adapter if bitrate, wiring, ground, and termination are correct.
