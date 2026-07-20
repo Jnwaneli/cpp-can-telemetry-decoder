@@ -6778,3 +6778,387 @@ My answer:
 Reference answer:
 
 Invert Tree shows that recursion works well when a structure is made of smaller versions of itself. For CAN wiring, the STM32 does not connect directly to CANH/CANL. It uses a transceiver, shared ground, matching bitrate, and proper termination to communicate with a USB-CAN adapter and PC.
+---
+
+# Week 5 Day 3 — Same Tree, Symmetric Tree, and STM32 FDCAN Configuration
+
+## Interview questions
+
+```text
+1. How does recursive comparison work?
+2. How does Same Tree compare two trees?
+3. How does Symmetric Tree compare a tree?
+4. What is the difference between Same Tree and Symmetric Tree?
+5. What are the battery voltage fault thresholds?
+6. Why does voltage fault checking happen after decoding?
+7. What is FDCAN/CAN configuration?
+8. What bitrate are you using?
+9. What frame ID are you sending first?
+10. What payload are you sending for 0x100?
+```
+
+---
+
+## How does recursive comparison work?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Recursive comparison checks two nodes at the same time.
+
+The base cases are:
+
+```text
+both null = match
+one null = not match
+different values = not match
+```
+
+If the current nodes match, the function compares their child nodes recursively.
+
+Simple version:
+
+```text
+Recursive comparison checks the current nodes, then checks smaller subtree pairs.
+```
+
+---
+
+## How does Same Tree compare two trees?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Same Tree compares two trees in matching positions.
+
+It compares:
+
+```text
+p node vs q node
+p left vs q left
+p right vs q right
+```
+
+Simple version:
+
+```text
+Same Tree checks whether two trees have the same structure and values.
+```
+
+---
+
+## How does Symmetric Tree compare a tree?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Symmetric Tree compares the left side and right side of one tree as mirrors.
+
+It compares:
+
+```text
+left node vs right node
+left outer child vs right outer child
+left inner child vs right inner child
+```
+
+In code, that means:
+
+```cpp
+isMirror(left->left, right->right);
+isMirror(left->right, right->left);
+```
+
+Simple version:
+
+```text
+Symmetric Tree checks whether the tree mirrors itself.
+```
+
+---
+
+## What is the difference between Same Tree and Symmetric Tree?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Same Tree checks whether two trees are identical.
+
+Symmetric Tree checks whether one tree is mirrored around its center.
+
+Same Tree compares:
+
+```text
+left with left
+right with right
+```
+
+Symmetric Tree compares:
+
+```text
+left with right
+right with left
+```
+
+Simple version:
+
+```text
+Same Tree checks identical structure, while Symmetric Tree checks mirror structure.
+```
+
+---
+
+## What are the battery voltage fault thresholds?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The current voltage fault thresholds are:
+
+```text
+battery < 10.5 V = low voltage fault
+battery > 14.8 V = high voltage fault
+```
+
+Output examples:
+
+```text
+FAULT: Battery voltage too low
+FAULT: Battery voltage too high
+```
+
+Simple version:
+
+```text
+Below 10.5 V is low, and above 14.8 V is high.
+```
+
+---
+
+## Why does voltage fault checking happen after decoding?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Voltage fault checking happens after decoding because the raw CAN bytes must first be converted into a real voltage.
+
+The decoder does:
+
+```text
+battery_mV = bytes 0-1
+battery_V = battery_mV / 1000.0
+```
+
+Then the fault analyzer checks the voltage limits.
+
+Simple version:
+
+```text
+The program must convert raw bytes into volts before checking voltage faults.
+```
+
+---
+
+## What is FDCAN/CAN configuration?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+FDCAN/CAN configuration means setting up the STM32 CAN peripheral so it can transmit and receive CAN frames correctly.
+
+Configuration includes:
+
+```text
+FDCAN pins
+bitrate
+frame format
+standard or extended ID
+DLC
+transmit mode
+filters
+```
+
+Simple version:
+
+```text
+CAN configuration makes sure the STM32 and USB-CAN adapter use compatible CAN settings.
+```
+
+---
+
+## What bitrate are you using?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The planned bitrate is:
+
+```text
+500 kbps
+```
+
+Both the STM32 FDCAN peripheral and the Waveshare USB-CAN adapter must use the same bitrate.
+
+Simple version:
+
+```text
+The CAN bus is planned for 500 kbps.
+```
+
+---
+
+## What frame ID are you sending first?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The first transmitted frame ID is:
+
+```text
+0x100
+```
+
+This is the analog input frame.
+
+Simple version:
+
+```text
+The first CAN frame sent from the STM32 is 0x100.
+```
+
+---
+
+## What payload are you sending for 0x100?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The first `0x100` payload is:
+
+```text
+00 08 10 00 FF 0A 07 01
+```
+
+Decoded meaning:
+
+```text
+AIN1_RAW = 2048
+AIN2_RAW = 16
+AIN3_RAW = 2815
+Status = 0x07
+Counter = 1
+```
+
+Simple version:
+
+```text
+The payload sends three simulated analog values, valid sensor flags, and a counter.
+```
+
+---
+
+## Week 5 Day 3 Core Interview Summary
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Recursive comparison works by checking two current nodes and then applying the same logic to smaller subtree pairs. Same Tree compares matching branches, while Symmetric Tree compares mirrored branches. On the hardware side, STM32 FDCAN must be configured with matching bitrate, correct TX/RX pins, standard ID format, DLC 8, and a first transmit frame of `0x100` with payload `00 08 10 00 FF 0A 07 01`.

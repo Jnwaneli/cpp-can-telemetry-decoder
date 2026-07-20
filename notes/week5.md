@@ -599,3 +599,267 @@ CAN needs correct differential wiring, common ground, termination, matching bitr
 ```text
 Invert Tree shows that recursion works well when a structure is made of smaller versions of itself. For the CAN hardware, the STM32 does not connect directly to CANH/CANL. It uses a transceiver, shared ground, matching bitrate, and proper termination to communicate with a USB-CAN adapter and PC.
 ``` 
+---
+
+# Day 3 — Same Tree, Symmetric Tree, and STM32 FDCAN Configuration
+
+## Main goals
+
+```text
+Compare trees recursively.
+Solve Same Tree.
+Solve Symmetric Tree.
+Confirm battery voltage fault rules.
+Configure STM32 FDCAN to send CAN frame 0x100.
+```
+
+---
+
+## Notes questions
+
+```text
+1. How does recursive comparison work?
+2. What is FDCAN/CAN configuration?
+3. What bitrate am I using?
+4. What frame ID am I sending first?
+```
+
+---
+
+## How does recursive comparison work?
+
+Recursive comparison checks two nodes at the same time.
+
+The logic is:
+
+```text
+if both nodes are null, they match
+if only one node is null, they do not match
+if values are different, they do not match
+otherwise compare the child nodes recursively
+```
+
+Simple explanation:
+
+```text
+Recursive comparison breaks a tree comparison into smaller node comparisons.
+```
+
+---
+
+## Same Tree
+
+Same Tree compares two trees in the same direction.
+
+It checks:
+
+```text
+p node vs q node
+p left vs q left
+p right vs q right
+```
+
+Code idea:
+
+```cpp
+bool isSameTree(TreeNode* p, TreeNode* q) {
+    if (p == nullptr && q == nullptr) {
+        return true;
+    }
+
+    if (p == nullptr || q == nullptr) {
+        return false;
+    }
+
+    if (p->val != q->val) {
+        return false;
+    }
+
+    return isSameTree(p->left, q->left) &&
+           isSameTree(p->right, q->right);
+}
+```
+
+Simple explanation:
+
+```text
+Same Tree compares matching positions in both trees.
+```
+
+---
+
+## Symmetric Tree
+
+Symmetric Tree compares the left side of a tree against the right side as a mirror.
+
+It checks:
+
+```text
+left node vs right node
+left outer child vs right outer child
+left inner child vs right inner child
+```
+
+Code idea:
+
+```cpp
+bool isMirror(TreeNode* left, TreeNode* right) {
+    if (left == nullptr && right == nullptr) {
+        return true;
+    }
+
+    if (left == nullptr || right == nullptr) {
+        return false;
+    }
+
+    if (left->val != right->val) {
+        return false;
+    }
+
+    return isMirror(left->left, right->right) &&
+           isMirror(left->right, right->left);
+}
+```
+
+Simple explanation:
+
+```text
+Symmetric Tree compares opposite sides of the tree like a mirror.
+```
+
+---
+
+## Difference between Same Tree and Symmetric Tree
+
+Same Tree compares:
+
+```text
+left with left
+right with right
+```
+
+Symmetric Tree compares:
+
+```text
+left with right
+right with left
+```
+
+Simple explanation:
+
+```text
+Same Tree checks identical structure, while Symmetric Tree checks mirror structure.
+```
+
+---
+
+## Battery voltage faults
+
+The `FaultAnalyzer` checks battery voltage after `0x101` is decoded.
+
+Rules:
+
+```text
+battery < 10.5 V = low voltage fault
+battery > 14.8 V = high voltage fault
+```
+
+Output examples:
+
+```text
+FAULT: Battery voltage too low
+FAULT: Battery voltage too high
+```
+
+Simple explanation:
+
+```text
+The decoder converts battery_mV to volts, then FaultAnalyzer checks the voltage limits.
+```
+
+---
+
+## What is FDCAN/CAN configuration?
+
+FDCAN/CAN configuration means setting up the STM32 CAN peripheral so it can transmit and receive CAN frames correctly.
+
+Configuration includes:
+
+```text
+FDCAN pins
+bitrate
+frame format
+standard or extended ID
+DLC
+transmit mode
+filter settings
+```
+
+Simple explanation:
+
+```text
+CAN configuration makes sure the STM32 and USB-CAN adapter speak the same CAN format.
+```
+
+---
+
+## What bitrate am I using?
+
+The planned bitrate is:
+
+```text
+500 kbps
+```
+
+Both sides must match:
+
+```text
+STM32 FDCAN = 500 kbps
+Waveshare USB-CAN = 500 kbps
+```
+
+Simple explanation:
+
+```text
+If the bitrates do not match, the PC will not correctly receive the frames.
+```
+
+---
+
+## What frame ID am I sending first?
+
+The first transmitted frame ID is:
+
+```text
+0x100
+```
+
+Payload:
+
+```text
+00 08 10 00 FF 0A 07 01
+```
+
+Meaning:
+
+```text
+AIN1_RAW = 2048
+AIN2_RAW = 16
+AIN3_RAW = 2815
+Status = 0x07
+Counter = 1
+```
+
+Simple explanation:
+
+```text
+The first hardware test sends the same kind of analog input frame that the desktop decoder already understands.
+```
+
+---
+
+## Day 3 main interview idea
+
+```text
+Recursive comparison works by checking matching or mirrored nodes and then applying the same logic to smaller subtrees. On the hardware side, STM32 FDCAN must be configured with the correct pins, bitrate, frame type, ID, and payload format so it can transmit frame 0x100 through the CAN transceiver to the USB-CAN adapter.
+```
