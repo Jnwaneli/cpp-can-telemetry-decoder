@@ -6,7 +6,7 @@
 
 class CircularBuffer {
 public:
-    static constexpr std::size_t Capacity = 5;
+    static constexpr std::size_t Capacity = 16;
 
     CircularBuffer();
 

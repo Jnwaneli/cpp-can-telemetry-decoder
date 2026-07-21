@@ -35,7 +35,7 @@ void DecoderStats::add_faults(std::size_t count) {
 void DecoderStats::print() const {
     std::cout << "Decoder Stats:" << std::endl;
 
-    std::cout << "Total frames: "
+    std::cout << "Frames processed: "
               << total_frames_
               << std::endl;
 
@@ -43,15 +43,15 @@ void DecoderStats::print() const {
               << valid_frames_
               << std::endl;
 
-    std::cout << "Invalid DLC frames: "
-              << invalid_dlc_frames_
-              << std::endl;
-
-    std::cout << "Unknown ID frames: "
+    std::cout << "Unknown IDs: "
               << unknown_id_frames_
               << std::endl;
 
-    std::cout << "Fault count: "
+    std::cout << "Invalid DLC: "
+              << invalid_dlc_frames_
+              << std::endl;
+
+    std::cout << "Faults: "
               << fault_count_
               << std::endl;
 }

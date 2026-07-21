@@ -7509,3 +7509,783 @@ My answer:
 Reference answer:
 
 BFS uses a queue to process nodes in the order they are discovered, which allows level-by-level traversal. On the hardware side, the STM32 sends standard CAN frame `0x100` every 100 ms through the transceiver, and the PC should receive it through the Waveshare USB-CAN adapter if bitrate, wiring, ground, and termination are correct.
+---
+
+# Week 5 Day 5 — Validate BST and Debug CAN
+
+## Interview questions
+
+```text
+1. How do you validate a BST?
+2. Why is checking only direct children not enough for BST validation?
+3. What bounds does the left subtree receive?
+4. What bounds does the right subtree receive?
+5. What is a parser state machine?
+6. What states are in the CAN parser?
+7. Why use enum class for ParserState?
+8. What CAN bugs are common?
+9. What CAN bug did you hit?
+10. How did you debug CAN?
+```
+
+---
+
+## How do you validate a BST?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Validate a BST using recursion with lower and upper bounds.
+
+Each node must satisfy:
+
+```text
+low < node value < high
+```
+
+The left subtree must stay below the current node.
+
+The right subtree must stay above the current node.
+
+Simple version:
+
+```text
+Each node must be inside the valid range passed down from its ancestors.
+```
+
+---
+
+## Why is checking only direct children not enough for BST validation?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Checking only direct children is not enough because a node must obey all ancestor limits.
+
+Example:
+
+```text
+        5
+       / \
+      1   6
+         / \
+        4   7
+```
+
+The value `4` is less than `6`, so it looks okay locally.
+
+But `4` is in the right subtree of `5`, so it must be greater than `5`.
+
+Simple version:
+
+```text
+BST validation needs ancestor bounds, not just parent-child checks.
+```
+
+---
+
+## What bounds does the left subtree receive?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The left subtree keeps the same lower bound, but its upper bound becomes the current node value.
+
+Example:
+
+```cpp
+validate(node->left, low, node->val);
+```
+
+Simple version:
+
+```text
+Left subtree values must be less than the current node.
+```
+
+---
+
+## What bounds does the right subtree receive?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The right subtree keeps the same upper bound, but its lower bound becomes the current node value.
+
+Example:
+
+```cpp
+validate(node->right, node->val, high);
+```
+
+Simple version:
+
+```text
+Right subtree values must be greater than the current node.
+```
+
+---
+
+## What is a parser state machine?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A parser state machine breaks processing into named stages.
+
+For a CAN frame, the parser can move through stages like waiting, validating, decoding, analyzing, and printing.
+
+Simple version:
+
+```text
+A parser state machine shows which step of frame processing is currently happening.
+```
+
+---
+
+## What states are in the CAN parser?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The CAN parser states are:
+
+```text
+WAIT_FOR_FRAME
+VALIDATE_ID
+VALIDATE_DLC
+DECODE
+ANALYZE_FAULTS
+PRINT_RESULT
+```
+
+Simple version:
+
+```text
+The parser moves from receiving a frame to validating, decoding, analyzing, and printing.
+```
+
+---
+
+## Why use enum class for ParserState?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`enum class` gives named states with strong scope.
+
+Example:
+
+```cpp
+ParserState::DECODE
+```
+
+is clearer than:
+
+```cpp
+3
+```
+
+It also avoids polluting the global namespace.
+
+Simple version:
+
+```text
+enum class makes parser states readable and safer than raw integers.
+```
+
+---
+
+## What CAN bugs are common?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Common CAN bugs include:
+
+```text
+wrong bitrate
+missing termination
+CANH/CANL swapped
+transceiver not powered
+no common ground
+wrong STM32 pin alternate function
+wrong CAN filter
+USB-CAN mode mismatch
+```
+
+Simple version:
+
+```text
+Most CAN bugs come from bitrate, wiring, power, ground, termination, filters, or mode settings.
+```
+
+---
+
+## What CAN bug did you hit?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+If the CAN frame was received correctly, the answer is:
+
+```text
+No CAN bug was hit today.
+```
+
+If it failed, describe the actual bug found.
+
+Examples:
+
+```text
+The bitrate did not match.
+CANH and CANL were swapped.
+The transceiver was not powered.
+The USB-CAN adapter was filtering out ID 0x100.
+```
+
+Simple version:
+
+```text
+Name the actual issue found during testing, or say no bug was hit.
+```
+
+---
+
+## How did you debug CAN?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Debug CAN one layer at a time.
+
+Checklist:
+
+```text
+firmware running
+FDCAN started successfully
+matching bitrate
+3.3 V power at transceiver
+common ground
+CANH/CANL wiring
+termination resistance
+USB-CAN normal mode
+filters accepting ID 0x100
+correct STM32 alternate function pins
+```
+
+Simple version:
+
+```text
+Check firmware, power, ground, wiring, termination, bitrate, filters, and mode step by step.
+```
+
+---
+
+## Week 5 Day 5 Core Interview Summary
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+BST validation uses recursion with lower and upper bounds because each node must obey limits from all of its ancestors. In the CAN decoder, a parser state machine organizes frame processing into named steps like validating ID, validating DLC, decoding, analyzing faults, and printing results. CAN debugging should be done layer by layer, checking bitrate, wiring, ground, power, termination, filters, USB-CAN mode, and STM32 pin configuration.
+---
+
+# Week 5 Day 6 — Integration, Captured Log, and Week 5 Review
+
+## Interview questions
+
+```text
+1. What is recursion?
+2. What is the call stack?
+3. DFS vs BFS?
+4. Why can recursion be risky in embedded systems?
+5. What is CAN arbitration?
+6. What is a CAN transceiver?
+7. Why does CAN need termination?
+8. How do STM32 frames reach your C++ decoder?
+9. How would you debug missing CAN frames?
+10. What is a parser state machine?
+```
+
+---
+
+## What is recursion?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Recursion is when a function calls itself to solve a smaller version of the same problem.
+
+A recursive function needs:
+
+```text
+base case
+recursive case
+```
+
+The base case stops the recursion.
+
+The recursive case continues the recursion with a smaller input.
+
+Simple version:
+
+```text
+Recursion solves a problem by calling the same function on smaller versions of the problem.
+```
+
+---
+
+## What is the call stack?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The call stack stores active function calls.
+
+In recursion, each recursive call is placed on the stack until the base case is reached.
+
+Then the calls return back up.
+
+Example:
+
+```text
+factorial(4)
+factorial(3)
+factorial(2)
+factorial(1)
+```
+
+Simple version:
+
+```text
+The call stack remembers unfinished function calls.
+```
+
+---
+
+## DFS vs BFS?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+DFS means Depth-First Search.
+
+BFS means Breadth-First Search.
+
+DFS goes deep before exploring siblings.
+
+BFS explores level by level.
+
+Typical structures:
+
+```text
+DFS = recursion or stack
+BFS = queue
+```
+
+Simple version:
+
+```text
+DFS goes deep first, while BFS goes level by level.
+```
+
+---
+
+## Why can recursion be risky in embedded systems?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Recursion can be risky in embedded systems because stack memory is limited.
+
+Each recursive call uses stack space.
+
+Too many recursive calls can cause stack overflow.
+
+Simple version:
+
+```text
+Recursion can use too much stack memory on small embedded systems.
+```
+
+---
+
+## What is CAN arbitration?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+CAN arbitration is the process that decides which node gets to transmit when multiple nodes try to send at the same time.
+
+Lower CAN IDs have higher priority.
+
+Nodes monitor the bus while transmitting.
+
+If a node loses arbitration, it stops transmitting and waits.
+
+Simple version:
+
+```text
+CAN arbitration lets the highest-priority message win without corrupting the bus.
+```
+
+---
+
+## What is a CAN transceiver?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A CAN transceiver converts between microcontroller CAN logic signals and physical CAN bus signals.
+
+It connects:
+
+```text
+STM32 FDCAN TX/RX
+```
+
+to:
+
+```text
+CANH/CANL
+```
+
+Simple version:
+
+```text
+The transceiver converts STM32 logic into CAN bus electrical signals.
+```
+
+---
+
+## Why does CAN need termination?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+CAN needs termination to reduce signal reflections on the bus.
+
+A typical CAN bus uses:
+
+```text
+120 ohms at each end
+```
+
+With two 120 ohm terminations, measuring CANH to CANL with power off should show about:
+
+```text
+60 ohms
+```
+
+Simple version:
+
+```text
+Termination keeps the CAN signal clean and reliable.
+```
+
+---
+
+## How do STM32 frames reach your C++ decoder?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The data path is:
+
+```text
+STM32 FDCAN
+        ↓
+SN65HVD230 transceiver
+        ↓
+CANH/CANL bus
+        ↓
+Waveshare USB-CAN adapter
+        ↓
+PC receive software
+        ↓
+CAN log file
+        ↓
+C++ decoder
+```
+
+The STM32 sends the CAN frame.
+
+The transceiver drives the CAN bus.
+
+The USB-CAN adapter captures the frame.
+
+The PC saves or exports the data.
+
+The C++ decoder reads the log file.
+
+Simple version:
+
+```text
+STM32 sends the frame, USB-CAN captures it, and the desktop decoder reads the saved log.
+```
+
+---
+
+## How would you debug missing CAN frames?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+I would debug missing CAN frames layer by layer.
+
+Checklist:
+
+```text
+firmware is running
+FDCAN started successfully
+STM32 bitrate matches USB-CAN bitrate
+SN65HVD230 has 3.3 V power
+common ground is connected
+CANH goes to CANH
+CANL goes to CANL
+termination resistance is correct
+USB-CAN is in normal mode
+filters accept the target ID
+STM32 pins match CubeMX alternate function settings
+```
+
+Simple version:
+
+```text
+Check firmware, bitrate, power, ground, wiring, termination, filters, mode, and pin configuration.
+```
+
+---
+
+## What is a parser state machine?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A parser state machine breaks frame processing into named stages.
+
+Current parser states:
+
+```text
+WAIT_FOR_FRAME
+VALIDATE_ID
+VALIDATE_DLC
+DECODE
+ANALYZE_FAULTS
+PRINT_RESULT
+```
+
+This makes the decoder flow easier to understand and debug.
+
+Simple version:
+
+```text
+A parser state machine organizes frame processing into clear steps.
+```
+
+---
+
+## Week 5 Core Interview Summary
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Week 5 focused on recursion, tree problems, CAN hardware integration, and decoder integration. I learned DFS-style recursive tree logic, BFS with queues, BST validation with bounds, and parser state machines. On the hardware side, I planned and tested the CAN bridge from STM32 FDCAN through the SN65HVD230 transceiver to the Waveshare USB-CAN adapter. On the software side, I added `DecoderStats`, documented the CAN protocol, created sample output documentation, and connected a sample CAN log to the C++ decoder.

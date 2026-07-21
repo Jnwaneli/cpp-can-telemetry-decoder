@@ -1107,3 +1107,271 @@ CAN receive problems usually come from bitrate mismatch, wiring mistakes, missin
 ```text
 BFS uses a queue to process nodes in the order they are discovered, which allows level-by-level traversal. On the hardware side, the STM32 sends standard CAN frame 0x100 every 100 ms through the transceiver, and the PC should receive it through the Waveshare USB-CAN adapter if bitrate, wiring, ground, and termination are correct.
 ```
+---
+
+# Day 5 — Validate BST and Debug CAN
+
+## Main goals
+
+```text
+Learn BST validation.
+Solve Validate Binary Search Tree.
+Create ParserState enum class.
+Understand parser state machines.
+Debug CAN if needed.
+```
+
+---
+
+## Notes questions
+
+```text
+1. How do you validate a BST?
+2. What is a parser state machine?
+3. What CAN bug did I hit?
+4. How did I debug it?
+```
+
+---
+
+## How do you validate a BST?
+
+A Binary Search Tree is valid when every node follows this rule:
+
+```text
+left subtree values < current node < right subtree values
+```
+
+The best recursive method uses lower and upper bounds.
+
+For each node:
+
+```text
+node value must be greater than the lower bound
+node value must be less than the upper bound
+```
+
+Simple explanation:
+
+```text
+Validate a BST by making sure every node stays inside the allowed range passed down from its ancestors.
+```
+
+---
+
+## Why direct child checking is not enough
+
+Only checking the direct children can miss invalid trees.
+
+Example:
+
+```text
+        5
+       / \
+      1   6
+         / \
+        4   7
+```
+
+Node `4` is less than `6`, so it looks okay locally.
+
+But `4` is in the right subtree of `5`, so it must be greater than `5`.
+
+Since `4 < 5`, the tree is not a valid BST.
+
+Simple explanation:
+
+```text
+A node must obey all ancestor limits, not just its parent.
+```
+
+---
+
+## Validate BST code idea
+
+```cpp
+bool validate(TreeNode* node, long long low, long long high) {
+    if (node == nullptr) {
+        return true;
+    }
+
+    if (node->val <= low || node->val >= high) {
+        return false;
+    }
+
+    return validate(node->left, low, node->val) &&
+           validate(node->right, node->val, high);
+}
+```
+
+The left child gets a smaller upper bound.
+
+The right child gets a larger lower bound.
+
+---
+
+## What is a parser state machine?
+
+A parser state machine breaks processing into clear stages.
+
+For the CAN decoder, the stages are:
+
+```text
+WAIT_FOR_FRAME
+VALIDATE_ID
+VALIDATE_DLC
+DECODE
+ANALYZE_FAULTS
+PRINT_RESULT
+```
+
+Simple explanation:
+
+```text
+A parser state machine shows what stage the frame processor is currently in.
+```
+
+---
+
+## ParserState enum
+
+The project uses:
+
+```cpp
+enum class ParserState {
+    WAIT_FOR_FRAME,
+    VALIDATE_ID,
+    VALIDATE_DLC,
+    DECODE,
+    ANALYZE_FAULTS,
+    PRINT_RESULT
+};
+```
+
+Using `enum class` is cleaner than using raw integers.
+
+Example:
+
+```cpp
+ParserState::DECODE
+```
+
+is clearer than:
+
+```cpp
+3
+```
+
+Simple explanation:
+
+```text
+enum class gives meaningful names to parser states.
+```
+
+---
+
+## Why parser states are useful
+
+Parser states make the frame processing flow easier to understand.
+
+Current flow:
+
+```text
+wait for frame
+validate CAN ID
+validate DLC
+decode payload
+analyze faults
+print result
+```
+
+This is useful because real embedded parsers and communication stacks often use state machines.
+
+Simple explanation:
+
+```text
+State machines make communication logic easier to organize and debug.
+```
+
+---
+
+## What CAN bug did I hit?
+
+Record the actual CAN bug here:
+
+```text
+CAN bug hit:
+[Write the actual bug here]
+```
+
+If the PC received the frame correctly, write:
+
+```text
+No CAN bug hit today.
+```
+
+If the PC did not receive the frame, possible bugs include:
+
+```text
+wrong bitrate
+missing termination
+CANH/CANL swapped
+transceiver not powered
+no common ground
+wrong STM32 pin alternate function
+wrong CAN filter
+USB-CAN mode mismatch
+```
+
+---
+
+## How did I debug it?
+
+Debug CAN one layer at a time.
+
+Checklist:
+
+```text
+firmware running
+FDCAN started successfully
+STM32 bitrate matches USB-CAN bitrate
+SN65HVD230 has 3.3 V power
+NUCLEO, transceiver, and USB-CAN share ground
+CANH goes to CANH
+CANL goes to CANL
+termination resistance is correct
+USB-CAN is in normal mode
+filters accept ID 0x100
+STM32 pins match CubeMX FDCAN alternate function
+```
+
+Simple explanation:
+
+```text
+CAN debugging works best when checking power, wiring, bitrate, termination, filters, and firmware one step at a time.
+```
+
+---
+
+## Common CAN bugs
+
+Common CAN bugs include:
+
+```text
+wrong bitrate
+missing termination
+CANH/CANL swapped
+transceiver not powered
+no common ground
+wrong STM32 pin alternate function
+wrong CAN filter
+USB-CAN mode mismatch
+```
+
+---
+
+## Day 5 main interview idea
+
+```text
+BST validation uses recursion with lower and upper bounds because each node must obey limits from all of its ancestors. In the CAN decoder, a parser state machine organizes the frame-processing flow into states such as validating ID, validating DLC, decoding, analyzing faults, and printing results. CAN debugging should be done layer by layer: bitrate, wiring, ground, power, termination, filters, and firmware.
+```
