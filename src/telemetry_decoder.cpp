@@ -18,23 +18,8 @@ TelemetryDecoder::TelemetryDecoder()
       frames_seen_(0) {
 }
 
-std::size_t TelemetryDecoder::decode(const CanFrame& frame) {
+void TelemetryDecoder::record_frame_seen() {
     frames_seen_++;
-
-    switch (frame.id) {
-        case 0x100:
-            return decode_0x100(frame);
-
-        case 0x101:
-            return decode_0x101(frame);
-
-        case 0x102:
-            return decode_0x102(frame);
-
-        default:
-            std::cout << "Type: Known frame, decoder not implemented yet" << std::endl;
-            return 0;
-    }
 }
 
 std::size_t TelemetryDecoder::frames_seen() const {

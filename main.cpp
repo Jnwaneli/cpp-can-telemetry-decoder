@@ -1,6 +1,7 @@
 #include <array>
 #include <cctype>
 #include <cstdint>
+#include <exception>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -10,6 +11,7 @@
 #include <vector>
 
 #include "bit_utils.hpp"
+#include "can_dispatcher.hpp"
 #include "can_frame.hpp"
 #include "can_validation.hpp"
 #include "circular_buffer.hpp"
@@ -166,7 +168,7 @@ void bitExperiment() {
     std::cout << "Bit experiment:" << std::endl;
 
     std::uint8_t value = 0x00;
-    std::uint8_t mask = 0x04;  // bit 2
+    std::uint8_t mask = 0x04;
 
     std::cout << "Initial value: 0x"
               << std::hex
@@ -212,8 +214,8 @@ void bitExperiment() {
               << std::dec
               << std::endl;
 
-    std::uint8_t status = 0x85;      // 1000 0101
-    std::uint8_t error_mask = 0x80;  // 1000 0000
+    std::uint8_t status = 0x85;
+    std::uint8_t error_mask = 0x80;
 
     std::cout << "Status byte: 0x"
               << std::hex
@@ -324,7 +326,7 @@ void print_frame_header(const CanFrame& frame) {
     print_payload(frame);
 }
 
-void process_frame(const CanFrame& frame, TelemetryDecoder& decoder, DecoderStats& stats) {
+void process_frame(const CanFrame& frame, CanDispatcher& dispatcher, DecoderStats& stats) {
     print_parser_state(ParserState::WAIT_FOR_FRAME);
 
     stats.record_frame_received();
@@ -365,7 +367,7 @@ void process_frame(const CanFrame& frame, TelemetryDecoder& decoder, DecoderStat
 
     print_parser_state(ParserState::DECODE);
 
-    std::size_t decoded_faults = decoder.decode(frame);
+    std::size_t decoded_faults = dispatcher.dispatch(frame);
 
     print_parser_state(ParserState::ANALYZE_FAULTS);
 
@@ -409,14 +411,14 @@ void load_frames_into_buffer(const std::vector<CanFrame>& log, CircularBuffer& r
 }
 
 void process_buffered_frames(CircularBuffer& rx_buffer,
-                             TelemetryDecoder& decoder,
+                             CanDispatcher& dispatcher,
                              DecoderStats& stats) {
     std::cout << "Processing buffered CAN frames:" << std::endl;
 
     CanFrame frame{};
 
     while (rx_buffer.pop(frame)) {
-        process_frame(frame, decoder, stats);
+        process_frame(frame, dispatcher, stats);
     }
 
     std::cout << "------------------------------" << std::endl;
@@ -435,10 +437,11 @@ int main() {
 
     CircularBuffer rx_buffer;
     TelemetryDecoder decoder;
+    CanDispatcher dispatcher(decoder);
     DecoderStats stats;
 
     load_frames_into_buffer(can_log, rx_buffer);
-    process_buffered_frames(rx_buffer, decoder, stats);
+    process_buffered_frames(rx_buffer, dispatcher, stats);
 
     std::cout << "Decoder frames seen: "
               << decoder.frames_seen()
