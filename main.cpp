@@ -1,11 +1,7 @@
 #include <array>
-#include <cctype>
 #include <cstdint>
-#include <exception>
-#include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -13,6 +9,7 @@
 #include "bit_utils.hpp"
 #include "can_dispatcher.hpp"
 #include "can_frame.hpp"
+#include "can_log_parser.hpp"
 #include "can_validation.hpp"
 #include "circular_buffer.hpp"
 #include "decoder_stats.hpp"
@@ -33,56 +30,6 @@ void print_parser_state(ParserState state) {
               << std::endl;
 }
 
-std::string trim(const std::string& text) {
-    std::size_t start = 0;
-
-    while (start < text.size() &&
-           std::isspace(static_cast<unsigned char>(text[start]))) {
-        start++;
-    }
-
-    std::size_t end = text.size();
-
-    while (end > start &&
-           std::isspace(static_cast<unsigned char>(text[end - 1]))) {
-        end--;
-    }
-
-    return text.substr(start, end - start);
-}
-
-std::uint32_t parse_u32_token(const std::string& token) {
-    std::string cleaned = trim(token);
-    return static_cast<std::uint32_t>(std::stoul(cleaned, nullptr, 0));
-}
-
-std::uint8_t parse_u8_token(const std::string& token) {
-    return static_cast<std::uint8_t>(parse_u32_token(token));
-}
-
-bool parse_can_frame_line(const std::string& line, CanFrame& frame) {
-    std::stringstream stream(line);
-    std::string token;
-    std::vector<std::string> tokens;
-
-    while (std::getline(stream, token, ',')) {
-        tokens.push_back(trim(token));
-    }
-
-    if (tokens.size() != 10) {
-        return false;
-    }
-
-    frame.id = parse_u32_token(tokens[0]);
-    frame.dlc = parse_u8_token(tokens[1]);
-
-    for (int i = 0; i < 8; i++) {
-        frame.data[i] = parse_u8_token(tokens[i + 2]);
-    }
-
-    return true;
-}
-
 std::vector<CanFrame> create_fallback_can_log() {
     return {
         {0x100, 8, {0x00, 0x08, 0x10, 0x00, 0xFF, 0x0A, 0x07, 0x01}},
@@ -96,72 +43,6 @@ std::vector<CanFrame> create_fallback_can_log() {
         {0x999, 8, {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}},
         {0x100, 4, {0x00, 0x08, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00}}
     };
-}
-
-std::vector<CanFrame> load_can_log_from_csv(const std::string& path) {
-    std::ifstream file(path);
-
-    if (!file) {
-        std::cout << "CAN log file not found: "
-                  << path
-                  << std::endl;
-
-        std::cout << "Using fallback built-in CAN log."
-                  << std::endl
-                  << std::endl;
-
-        return create_fallback_can_log();
-    }
-
-    std::vector<CanFrame> log;
-    std::string line;
-    bool first_line = true;
-
-    while (std::getline(file, line)) {
-        line = trim(line);
-
-        if (line.empty()) {
-            continue;
-        }
-
-        if (first_line && line.find("id") != std::string::npos) {
-            first_line = false;
-            continue;
-        }
-
-        first_line = false;
-
-        CanFrame frame{};
-
-        try {
-            if (parse_can_frame_line(line, frame)) {
-                log.push_back(frame);
-            } else {
-                std::cout << "Skipped malformed CAN log line: "
-                          << line
-                          << std::endl;
-            }
-        } catch (const std::exception& error) {
-            std::cout << "Skipped CAN log line due to parse error: "
-                      << line
-                      << std::endl;
-
-            std::cout << "Parse error: "
-                      << error.what()
-                      << std::endl;
-        }
-    }
-
-    std::cout << "Loaded CAN log from: "
-              << path
-              << std::endl;
-
-    std::cout << "Frames loaded: "
-              << log.size()
-              << std::endl
-              << std::endl;
-
-    return log;
 }
 
 void bitExperiment() {
@@ -434,6 +315,14 @@ int main() {
     arrayExperiment();
 
     std::vector<CanFrame> can_log = load_can_log_from_csv("data/sample_can_log.csv");
+
+    if (can_log.empty()) {
+        std::cout << "Using fallback built-in CAN log."
+                  << std::endl
+                  << std::endl;
+
+        can_log = create_fallback_can_log();
+    }
 
     CircularBuffer rx_buffer;
     TelemetryDecoder decoder;

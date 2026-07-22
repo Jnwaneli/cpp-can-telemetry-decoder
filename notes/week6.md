@@ -640,3 +640,347 @@ My answer:
 Reference answer:
 
 A graph can be represented with an adjacency list, where each node maps to its neighbors. Flood Fill is a graph traversal problem on a 2D grid. In the CAN decoder project, `CanDispatcher` separates frame routing from payload decoding by using the CAN ID to route each frame to the correct `TelemetryDecoder` function.
+---
+
+# Day 2 — Grid DFS and CSV Parser
+
+## Main goals
+
+```text
+Study grid DFS.
+Solve Number of Islands.
+Create a CSV/text parser for CAN logs.
+Read ID, DLC, and eight data bytes from a text line.
+Create CanFrame objects from log input.
+Pass parsed frames through the dispatcher.
+Continue using simulated logs until live USB-CAN input is added later.
+```
+
+---
+
+## Notes questions
+
+```text
+1. How does DFS visit connected components?
+2. How does CSV parsing work?
+3. What errors can happen when reading logs?
+4. Why is log input important before live input?
+```
+
+---
+
+## How does DFS visit connected components?
+
+DFS starts at one node or grid cell, marks it as visited, then recursively visits connected neighbors.
+
+In a grid, neighbors usually mean:
+
+```text
+up
+down
+left
+right
+```
+
+For Number of Islands, DFS starts on a land cell and visits all connected land cells.
+
+Simple explanation:
+
+```text
+DFS follows one connected path as far as possible before returning and trying other paths.
+```
+
+---
+
+## Number of Islands
+
+LeetCode 200 counts connected groups of land.
+
+```text
+'1' = land
+'0' = water
+```
+
+When the algorithm finds land, it counts one island and uses DFS to mark the entire connected island as visited.
+
+Simple explanation:
+
+```text
+Each DFS call removes one full island from the grid.
+```
+
+---
+
+## Number of Islands code idea
+
+```cpp
+class Solution {
+public:
+    int numIslands(vector<vector<char>>& grid) {
+        int islands = 0;
+
+        for (int row = 0; row < grid.size(); row++) {
+            for (int col = 0; col < grid[0].size(); col++) {
+                if (grid[row][col] == '1') {
+                    islands++;
+                    dfs(grid, row, col);
+                }
+            }
+        }
+
+        return islands;
+    }
+
+private:
+    void dfs(vector<vector<char>>& grid, int row, int col) {
+        if (row < 0 || row >= grid.size()) {
+            return;
+        }
+
+        if (col < 0 || col >= grid[0].size()) {
+            return;
+        }
+
+        if (grid[row][col] != '1') {
+            return;
+        }
+
+        grid[row][col] = '0';
+
+        dfs(grid, row + 1, col);
+        dfs(grid, row - 1, col);
+        dfs(grid, row, col + 1);
+        dfs(grid, row, col - 1);
+    }
+};
+```
+
+---
+
+## How does CSV parsing work?
+
+CSV parsing reads a line of text and splits it by commas.
+
+Example input line:
+
+```text
+100,8,00,08,10,00,FF,0A,01,05
+```
+
+Fields:
+
+```text
+100 = CAN ID
+8 = DLC
+00 = byte 0
+08 = byte 1
+10 = byte 2
+00 = byte 3
+FF = byte 4
+0A = byte 5
+01 = byte 6
+05 = byte 7
+```
+
+The parser converts those text tokens into numbers and stores them in a `CanFrame`.
+
+Simple explanation:
+
+```text
+CSV parsing turns text log lines into structured CAN frame objects.
+```
+
+---
+
+## CAN log input format
+
+Current parser input format:
+
+```text
+id,dlc,b0,b1,b2,b3,b4,b5,b6,b7
+```
+
+Example:
+
+```text
+100,8,00,08,10,00,FF,0A,01,05
+```
+
+The ID and data bytes are read as hexadecimal values.
+
+The DLC is read as a decimal value.
+
+The parser also accepts `0x` prefixes.
+
+Example:
+
+```text
+0x100,8,0x00,0x08,0x10,0x00,0xFF,0x0A,0x01,0x05
+```
+
+---
+
+## Parser flow
+
+The parser does this:
+
+```text
+open CSV file
+read one line
+skip empty lines
+skip first line only if it starts with id,dlc
+split line by commas
+validate token count
+parse ID
+parse DLC
+parse eight data bytes
+create CanFrame
+add CanFrame to vector
+```
+
+Then the project sends parsed frames through:
+
+```text
+CanFrame
+        ↓
+CircularBuffer
+        ↓
+CanDispatcher
+        ↓
+TelemetryDecoder
+        ↓
+FaultAnalyzer
+        ↓
+DecoderStats
+```
+
+---
+
+## Safer header detection
+
+A bad header check would be:
+
+```text
+If the first line contains any letter, treat it as a header.
+```
+
+That is unsafe because hexadecimal CAN data can contain letters:
+
+```text
+FF
+0A
+0x100
+```
+
+So this valid CAN line should not be skipped:
+
+```text
+100,8,00,08,10,00,FF,0A,07,01
+```
+
+The safer method checks for actual column names:
+
+```text
+first token == id
+second token == dlc
+```
+
+Simple explanation:
+
+```text
+Header detection should check for real header names, not just letters.
+```
+
+---
+
+## What errors can happen when reading logs?
+
+Common log-reading errors include:
+
+```text
+missing file
+empty line
+header line
+missing fields
+extra fields
+invalid hex value
+byte larger than 0xFF
+invalid DLC value
+malformed row
+wrong delimiter
+incorrect header detection
+```
+
+The parser should skip malformed lines instead of crashing the whole program when possible.
+
+Simple explanation:
+
+```text
+Real logs can be messy, so the parser needs basic error handling.
+```
+
+---
+
+## Why is log input important before live input?
+
+Log input is important because it is repeatable.
+
+A saved file can be tested again and again with the same results.
+
+This makes it easier to verify:
+
+```text
+parsing
+ID validation
+DLC validation
+dispatching
+decoding
+fault detection
+statistics
+```
+
+Simple explanation:
+
+```text
+Logs let me test the decoder reliably before adding live USB-CAN reading.
+```
+
+---
+
+## Simulated logs for now
+
+For now, the project continues using:
+
+```text
+data/sample_can_log.csv
+```
+
+The hardware CAN path worked, but live reading will come later.
+
+Current workflow:
+
+```text
+simulated or captured-style CSV log
+        ↓
+C++ decoder
+        ↓
+decoded values, faults, and stats
+```
+
+Future workflow:
+
+```text
+Waveshare USB-CAN live frames
+        ↓
+C++ decoder
+        ↓
+decoded values, faults, and stats
+```
+
+---
+
+## Day 2 main interview idea
+
+```text
+Grid DFS visits connected components by marking one cell and recursively visiting its neighbors. Number of Islands uses DFS to count connected land groups. In the CAN decoder project, CSV parsing converts text log lines into CanFrame objects, allowing the decoder to test parsing, dispatching, decoding, fault detection, and stats before adding live USB-CAN input. Header detection must be careful because hexadecimal log values can contain letters.
+```

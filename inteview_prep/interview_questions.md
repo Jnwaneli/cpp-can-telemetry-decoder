@@ -8289,3 +8289,419 @@ My answer:
 Reference answer:
 
 Week 5 focused on recursion, tree problems, CAN hardware integration, and decoder integration. I learned DFS-style recursive tree logic, BFS with queues, BST validation with bounds, and parser state machines. On the hardware side, I planned and tested the CAN bridge from STM32 FDCAN through the SN65HVD230 transceiver to the Waveshare USB-CAN adapter. On the software side, I added `DecoderStats`, documented the CAN protocol, created sample output documentation, and connected a sample CAN log to the C++ decoder.
+---
+
+# Week 6 Day 2 — Grid DFS and CSV Parser
+
+## Interview questions
+
+```text
+1. What is grid DFS?
+2. How does DFS visit connected components?
+3. How does Number of Islands use DFS?
+4. What is the base case in grid DFS?
+5. How does CSV parsing work?
+6. What is the CAN log input format?
+7. What does one CSV line become in the decoder?
+8. What errors can happen when reading logs?
+9. Why is log input useful before live input?
+10. How does parsed log data reach the dispatcher?
+11. Why is checking for any letter a bad way to detect CSV headers?
+```
+
+---
+
+## What is grid DFS?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Grid DFS is depth-first search on a 2D grid.
+
+Each cell is treated like a node.
+
+Neighboring cells are treated like connected nodes.
+
+Simple version:
+
+```text
+Grid DFS is DFS where the graph is a 2D grid.
+```
+
+---
+
+## How does DFS visit connected components?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+DFS starts at one node, marks it as visited, then recursively visits connected neighbors.
+
+This continues until the entire connected component has been visited.
+
+Simple version:
+
+```text
+DFS explores all connected nodes reachable from the starting node.
+```
+
+---
+
+## How does Number of Islands use DFS?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Number of Islands scans the grid.
+
+When it finds land, it counts one island.
+
+Then DFS marks all connected land cells as visited.
+
+Simple version:
+
+```text
+Each DFS call visits one full island.
+```
+
+---
+
+## What is the base case in grid DFS?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The base cases are:
+
+```text
+row is out of bounds
+column is out of bounds
+current cell is not the target value
+```
+
+For Number of Islands, DFS stops when it reaches water or leaves the grid.
+
+Simple version:
+
+```text
+Stop if the cell is outside the grid or is not land.
+```
+
+---
+
+## How does CSV parsing work?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+CSV parsing reads a line of text, splits it by commas, converts each token into the correct type, and stores the result in a structured object.
+
+Example:
+
+```text
+100,8,00,08,10,00,FF,0A,01,05
+```
+
+becomes one `CanFrame`.
+
+Simple version:
+
+```text
+CSV parsing turns text fields into structured data.
+```
+
+---
+
+## What is the CAN log input format?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The current CAN log format is:
+
+```text
+id,dlc,b0,b1,b2,b3,b4,b5,b6,b7
+```
+
+Example:
+
+```text
+100,8,00,08,10,00,FF,0A,01,05
+```
+
+The ID and data bytes are parsed as hexadecimal values.
+
+The DLC is parsed as a decimal value.
+
+Simple version:
+
+```text
+Each line contains one CAN ID, one DLC, and eight data bytes.
+```
+
+---
+
+## What does one CSV line become in the decoder?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+One CSV line becomes one `CanFrame`.
+
+The parsed frame contains:
+
+```text
+id
+dlc
+data[8]
+```
+
+Simple version:
+
+```text
+One log line becomes one CAN frame object.
+```
+
+---
+
+## What errors can happen when reading logs?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Common log-reading errors include:
+
+```text
+missing file
+empty line
+missing fields
+extra fields
+invalid hex value
+byte larger than 0xFF
+invalid DLC value
+malformed row
+wrong delimiter
+incorrect header detection
+```
+
+Simple version:
+
+```text
+Log files can be missing, malformed, or contain invalid values.
+```
+
+---
+
+## Why is log input useful before live input?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Log input is useful because it is repeatable.
+
+The same file can be tested many times with the same result.
+
+This makes it easier to verify:
+
+```text
+parsing
+validation
+dispatching
+decoding
+fault detection
+stats
+```
+
+before adding live USB-CAN reading.
+
+Simple version:
+
+```text
+Logs make the decoder easier to test before live hardware input.
+```
+
+---
+
+## How does parsed log data reach the dispatcher?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The parser creates `CanFrame` objects.
+
+Those frames are loaded into the circular buffer.
+
+Then each frame is popped from the buffer and passed to `CanDispatcher`.
+
+Flow:
+
+```text
+CSV line
+        ↓
+CanFrame
+        ↓
+CircularBuffer
+        ↓
+CanDispatcher
+        ↓
+TelemetryDecoder
+```
+
+Simple version:
+
+```text
+Parsed frames enter the same processing pipeline as simulated frames.
+```
+
+---
+
+## Why is checking for any letter a bad way to detect CSV headers?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Checking for any letter is unsafe because valid hexadecimal values can contain letters.
+
+Examples:
+
+```text
+FF
+0A
+0x100
+```
+
+So this valid CAN line should not be treated as a header:
+
+```text
+100,8,00,08,10,00,FF,0A,07,01
+```
+
+A safer method checks for actual column names:
+
+```text
+first token == id
+second token == dlc
+```
+
+Simple version:
+
+```text
+Header detection should check for real header names, not just letters.
+```
+
+---
+
+## Week 6 Day 2 Core Interview Summary
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Grid DFS visits connected components by marking one cell and recursively visiting its neighbors. Number of Islands uses DFS to count connected land groups. In the CAN decoder project, CSV parsing converts text log lines into `CanFrame` objects, allowing the decoder to test parsing, dispatching, decoding, fault detection, and stats before adding live USB-CAN input. Header detection must be careful because hexadecimal log values can contain letters.
