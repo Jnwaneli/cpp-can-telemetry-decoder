@@ -20,9 +20,7 @@ std::size_t CanDispatcher::dispatch(const CanFrame& frame) {
             return decoder_.decode_0x102(frame);
 
         case 0x200:
-            std::cout << "Type: Vehicle Telemetry" << std::endl;
-            std::cout << "Decoder not implemented yet for 0x200" << std::endl;
-            return 0;
+            return decoder_.decode_0x200(frame);
 
         default:
             std::cout << "Type: Unknown dispatch route" << std::endl;

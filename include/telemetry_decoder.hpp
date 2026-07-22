@@ -14,6 +14,7 @@ public:
     std::size_t decode_0x100(const CanFrame& frame);
     std::size_t decode_0x101(const CanFrame& frame);
     std::size_t decode_0x102(const CanFrame& frame);
+    std::size_t decode_0x200(const CanFrame& frame);
 
     std::size_t frames_seen() const;
 

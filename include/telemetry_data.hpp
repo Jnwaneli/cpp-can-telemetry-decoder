@@ -15,3 +15,13 @@ struct AnalogData {
     bool sensor3_valid;
     bool error_flag_set;
 };
+
+struct VehicleData {
+    std::uint16_t speed_raw;
+    std::uint16_t rpm;
+
+    std::uint8_t gear;
+    std::uint8_t throttle_percent;
+    std::uint8_t brake_percent;
+    std::uint8_t counter;
+};

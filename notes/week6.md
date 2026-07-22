@@ -984,3 +984,335 @@ decoded values, faults, and stats
 ```text
 Grid DFS visits connected components by marking one cell and recursively visiting its neighbors. Number of Islands uses DFS to count connected land groups. In the CAN decoder project, CSV parsing converts text log lines into CanFrame objects, allowing the decoder to test parsing, dispatching, decoding, fault detection, and stats before adding live USB-CAN input. Header detection must be careful because hexadecimal log values can contain letters.
 ```
+---
+
+# Week 6 Day 3 — Iterative DFS and Decode 0x200
+
+## Interview questions
+
+```text
+1. What is iterative DFS?
+2. How is iterative DFS different from recursive DFS?
+3. Why might iterative DFS be useful in embedded systems?
+4. How does Max Area of Island use DFS?
+5. What does CAN ID 0x200 represent?
+6. What fields are inside the 0x200 payload?
+7. How is speed_raw decoded?
+8. How is rpm decoded?
+9. Why does 0x200 include a counter?
+10. How would speed_raw be scaled later?
+```
+
+---
+
+## What is iterative DFS?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Iterative DFS is depth-first search using an explicit stack instead of recursive function calls.
+
+The programmer manually pushes and pops nodes from a stack.
+
+Simple version:
+
+```text
+Iterative DFS uses a stack to explore deeply without recursion.
+```
+
+---
+
+## How is iterative DFS different from recursive DFS?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Recursive DFS uses the function call stack automatically.
+
+Iterative DFS uses a stack container controlled by the programmer.
+
+Example:
+
+```cpp
+std::stack<std::pair<int, int>> cells;
+```
+
+Simple version:
+
+```text
+Recursive DFS lets function calls manage the stack; iterative DFS manages the stack directly.
+```
+
+---
+
+## Why might iterative DFS be useful in embedded systems?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Embedded systems often have limited stack memory.
+
+Deep recursion can cause stack overflow.
+
+Iterative DFS can be safer because the programmer controls the stack container and traversal behavior.
+
+Simple version:
+
+```text
+Iterative DFS can reduce recursion risk on memory-limited embedded systems.
+```
+
+---
+
+## How does Max Area of Island use DFS?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Max Area of Island scans the grid for land cells.
+
+When it finds land, it uses DFS to visit all connected land cells and count the area.
+
+It tracks the largest area found.
+
+Simple version:
+
+```text
+DFS counts each island, and the algorithm keeps the biggest count.
+```
+
+---
+
+## What does CAN ID 0x200 represent?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+CAN ID `0x200` represents vehicle telemetry.
+
+It carries basic vehicle motion and driver input information.
+
+Simple version:
+
+```text
+0x200 is the vehicle telemetry frame.
+```
+
+---
+
+## What fields are inside the 0x200 payload?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The `0x200` payload contains:
+
+```text
+Byte 0-1: speed_raw
+Byte 2-3: rpm
+Byte 4: gear
+Byte 5: throttle_percent
+Byte 6: brake_percent
+Byte 7: counter
+```
+
+Simple version:
+
+```text
+0x200 contains speed, RPM, gear, throttle, brake, and counter data.
+```
+
+---
+
+## How is speed_raw decoded?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`speed_raw` is decoded from bytes 0 and 1 using little-endian packing.
+
+```cpp
+std::uint16_t speed_raw = pack_u16(frame.data[0], frame.data[1]);
+```
+
+Simple version:
+
+```text
+speed_raw uses byte 0 as the low byte and byte 1 as the high byte.
+```
+
+---
+
+## How is rpm decoded?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`rpm` is decoded from bytes 2 and 3 using little-endian packing.
+
+```cpp
+std::uint16_t rpm = pack_u16(frame.data[2], frame.data[3]);
+```
+
+Simple version:
+
+```text
+rpm uses byte 2 as the low byte and byte 3 as the high byte.
+```
+
+---
+
+## Why does 0x200 include a counter?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The counter helps detect whether frames are updating correctly.
+
+It can help reveal:
+
+```text
+stale frames
+repeated frames
+dropped frames
+communication gaps
+```
+
+Simple version:
+
+```text
+The counter helps verify that the CAN message stream is alive and in order.
+```
+
+---
+
+## How would speed_raw be scaled later?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`speed_raw` is currently a raw integer.
+
+Later, it can be converted into a real speed value with a scale factor.
+
+Example:
+
+```text
+speed_mph = speed_raw * scale_factor
+```
+
+The exact scale factor depends on how the sender defines the signal.
+
+Simple version:
+
+```text
+speed_raw becomes real speed after applying a scale factor.
+```
+
+---
+
+## Week 6 Day 3 Core Interview Summary
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Iterative DFS performs depth-first traversal using an explicit stack instead of recursive calls. This is useful when recursion depth or stack memory is a concern. In the CAN decoder project, ID `0x200` adds vehicle telemetry data such as `speed_raw`, `rpm`, `gear`, `throttle_percent`, `brake_percent`, and a counter. The counter helps detect stale or missing frames, while `speed_raw` can later be scaled into a physical speed value.

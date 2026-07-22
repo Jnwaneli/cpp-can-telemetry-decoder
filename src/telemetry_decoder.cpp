@@ -198,3 +198,52 @@ std::size_t TelemetryDecoder::decode_0x102(const CanFrame& frame) {
 
     return 0;
 }
+
+std::size_t TelemetryDecoder::decode_0x200(const CanFrame& frame) {
+    if (frame.dlc < 8) {
+        std::cout << "Type: Vehicle Telemetry" << std::endl;
+        std::cout << "Result: FAULT - Invalid DLC for 0x200 decoder" << std::endl;
+        return 1;
+    }
+
+    VehicleData data{
+        pack_u16(frame.data[0], frame.data[1]),
+        pack_u16(frame.data[2], frame.data[3]),
+        frame.data[4],
+        frame.data[5],
+        frame.data[6],
+        frame.data[7]
+    };
+
+    std::cout << "Type: Vehicle Telemetry" << std::endl;
+
+    std::cout << "Speed_RAW: "
+              << data.speed_raw
+              << std::endl;
+
+    std::cout << "RPM: "
+              << data.rpm
+              << std::endl;
+
+    std::cout << "Gear: "
+              << static_cast<int>(data.gear)
+              << std::endl;
+
+    std::cout << "Throttle_Percent: "
+              << static_cast<int>(data.throttle_percent)
+              << "%"
+              << std::endl;
+
+    std::cout << "Brake_Percent: "
+              << static_cast<int>(data.brake_percent)
+              << "%"
+              << std::endl;
+
+    std::cout << "Counter: "
+              << static_cast<int>(data.counter)
+              << std::endl;
+
+    std::cout << "Speed scaling: not implemented yet" << std::endl;
+
+    return 0;
+}
