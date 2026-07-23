@@ -8705,3 +8705,669 @@ My answer:
 Reference answer:
 
 Grid DFS visits connected components by marking one cell and recursively visiting its neighbors. Number of Islands uses DFS to count connected land groups. In the CAN decoder project, CSV parsing converts text log lines into `CanFrame` objects, allowing the decoder to test parsing, dispatching, decoding, fault detection, and stats before adding live USB-CAN input. Header detection must be careful because hexadecimal log values can contain letters.
+---
+
+# Week 6 Day 3 — Iterative DFS and Decode 0x200
+
+## Interview questions
+
+```text
+1. What is iterative DFS?
+2. How is iterative DFS different from recursive DFS?
+3. Why might iterative DFS be useful in embedded systems?
+4. How does Max Area of Island use DFS?
+5. What does CAN ID 0x200 represent?
+6. What fields are inside the 0x200 payload?
+7. How is speed_raw decoded?
+8. How is rpm decoded?
+9. Why does 0x200 include a counter?
+10. How would speed_raw be scaled later?
+```
+
+---
+
+## What is iterative DFS?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Iterative DFS is depth-first search using an explicit stack instead of recursive function calls.
+
+The programmer manually pushes and pops nodes from a stack.
+
+Simple version:
+
+```text
+Iterative DFS uses a stack to explore deeply without recursion.
+```
+
+---
+
+## How is iterative DFS different from recursive DFS?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Recursive DFS uses the function call stack automatically.
+
+Iterative DFS uses a stack container controlled by the programmer.
+
+Example:
+
+```cpp
+std::stack<std::pair<int, int>> cells;
+```
+
+Simple version:
+
+```text
+Recursive DFS lets function calls manage the stack; iterative DFS manages the stack directly.
+```
+
+---
+
+## Why might iterative DFS be useful in embedded systems?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Embedded systems often have limited stack memory.
+
+Deep recursion can cause stack overflow.
+
+Iterative DFS can be safer because the programmer controls the stack container and traversal behavior.
+
+Simple version:
+
+```text
+Iterative DFS can reduce recursion risk on memory-limited embedded systems.
+```
+
+---
+
+## How does Max Area of Island use DFS?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Max Area of Island scans the grid for land cells.
+
+When it finds land, it uses DFS to visit all connected land cells and count the area.
+
+It tracks the largest area found.
+
+Simple version:
+
+```text
+DFS counts each island, and the algorithm keeps the biggest count.
+```
+
+---
+
+## What does CAN ID 0x200 represent?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+CAN ID `0x200` represents vehicle telemetry.
+
+It carries basic vehicle motion and driver input information.
+
+Simple version:
+
+```text
+0x200 is the vehicle telemetry frame.
+```
+
+---
+
+## What fields are inside the 0x200 payload?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The `0x200` payload contains:
+
+```text
+Byte 0-1: speed_raw
+Byte 2-3: rpm
+Byte 4: gear
+Byte 5: throttle_percent
+Byte 6: brake_percent
+Byte 7: counter
+```
+
+Simple version:
+
+```text
+0x200 contains speed, RPM, gear, throttle, brake, and counter data.
+```
+
+---
+
+## How is speed_raw decoded?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`speed_raw` is decoded from bytes 0 and 1 using little-endian packing.
+
+```cpp
+std::uint16_t speed_raw = pack_u16(frame.data[0], frame.data[1]);
+```
+
+Simple version:
+
+```text
+speed_raw uses byte 0 as the low byte and byte 1 as the high byte.
+```
+
+---
+
+## How is rpm decoded?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`rpm` is decoded from bytes 2 and 3 using little-endian packing.
+
+```cpp
+std::uint16_t rpm = pack_u16(frame.data[2], frame.data[3]);
+```
+
+Simple version:
+
+```text
+rpm uses byte 2 as the low byte and byte 3 as the high byte.
+```
+
+---
+
+## Why does 0x200 include a counter?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The counter helps detect whether frames are updating correctly.
+
+It can help reveal:
+
+```text
+stale frames
+repeated frames
+dropped frames
+communication gaps
+```
+
+Simple version:
+
+```text
+The counter helps verify that the CAN message stream is alive and in order.
+```
+
+---
+
+## How would speed_raw be scaled later?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`speed_raw` is currently a raw integer.
+
+Later, it can be converted into a real speed value with a scale factor.
+
+Example:
+
+```text
+speed_mph = speed_raw * scale_factor
+```
+
+The exact scale factor depends on how the sender defines the signal.
+
+Simple version:
+
+```text
+speed_raw becomes real speed after applying a scale factor.
+```
+
+---
+
+## Week 6 Day 3 Core Interview Summary
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Iterative DFS performs depth-first traversal using an explicit stack instead of recursive calls. This is useful when recursion depth or stack memory is a concern. In the CAN decoder project, ID `0x200` adds vehicle telemetry data such as `speed_raw`, `rpm`, `gear`, `throttle_percent`, `brake_percent`, and a counter. The counter helps detect stale or missing frames, while `speed_raw` can later be scaled into a physical speed value.
+---
+
+# Week 6 Day 4 — BFS Spread and Buffer to Dispatcher
+
+## Interview questions
+
+```text
+1. What kind of problems use BFS?
+2. Why does Rotting Oranges use BFS?
+3. Why does Rotting Oranges use levels?
+4. What does level_size represent?
+5. Why does BFS use a queue?
+6. How is a CAN RX buffer like a queue?
+7. Why use a buffer before dispatching frames?
+8. What happens after a frame is popped from the buffer?
+9. What does CanDispatcher do after receiving a frame?
+10. How does this pipeline prepare for live USB-CAN input later?
+```
+
+---
+
+## What kind of problems use BFS?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+BFS is useful for problems that process data level by level.
+
+Common examples:
+
+```text
+level order traversal
+shortest path in an unweighted graph
+spread over time
+nearest source problems
+grid expansion
+multi-source search
+```
+
+Simple version:
+
+```text
+BFS is used when the problem spreads or moves one layer at a time.
+```
+
+---
+
+## Why does Rotting Oranges use BFS?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Rotting Oranges uses BFS because rotten oranges spread outward to neighboring fresh oranges one step at a time.
+
+BFS naturally processes that spread layer by layer.
+
+Simple version:
+
+```text
+Rotting spreads outward, so BFS matches the problem.
+```
+
+---
+
+## Why does Rotting Oranges use levels?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Each BFS level represents one minute.
+
+All oranges in the current level rot their neighbors during the same minute.
+
+Newly rotten oranges belong to the next minute.
+
+Simple version:
+
+```text
+One BFS level equals one time step.
+```
+
+---
+
+## What does level_size represent?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`level_size` is the number of items currently in the queue for this BFS level.
+
+It is captured before adding new nodes.
+
+Simple version:
+
+```text
+level_size separates the current level from the next level.
+```
+
+---
+
+## Why does BFS use a queue?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+BFS uses a queue because a queue is first-in, first-out.
+
+The first node discovered is the first node processed.
+
+That keeps traversal level by level.
+
+Simple version:
+
+```text
+A queue preserves discovery order.
+```
+
+---
+
+## How is a CAN RX buffer like a queue?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A CAN RX buffer stores frames when they arrive.
+
+The program removes frames later for processing.
+
+This is similar to:
+
+```text
+push frame into buffer
+pop frame from buffer
+process frame
+```
+
+Simple version:
+
+```text
+A CAN RX buffer holds received frames in order until the decoder processes them.
+```
+
+---
+
+## Why use a buffer before dispatching frames?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A buffer separates input from processing.
+
+The input side collects frames.
+
+The processing side validates, dispatches, decodes, and analyzes frames.
+
+Simple version:
+
+```text
+The buffer lets receiving and decoding happen at different times.
+```
+
+---
+
+## What happens after a frame is popped from the buffer?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+After a frame is popped from the buffer, it goes through the decoder pipeline:
+
+```text
+validate ID
+validate DLC
+dispatch by CAN ID
+decode payload
+analyze faults
+print result
+update stats
+```
+
+Simple version:
+
+```text
+The popped frame is validated, dispatched, decoded, analyzed, and counted.
+```
+
+---
+
+## What does CanDispatcher do after receiving a frame?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`CanDispatcher` checks the frame ID and routes the frame to the correct decoder function.
+
+Examples:
+
+```text
+0x100 -> decode_0x100
+0x101 -> decode_0x101
+0x102 -> decode_0x102
+0x200 -> decode_0x200
+```
+
+Simple version:
+
+```text
+The dispatcher sends each CAN frame to the right decoder.
+```
+
+---
+
+## How does this pipeline prepare for live USB-CAN input later?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The processing pipeline already accepts `CanFrame` objects.
+
+Later, a live USB-CAN reader only needs to convert received USB-CAN frames into `CanFrame` objects and push them into the same buffer.
+
+Simple version:
+
+```text
+Live input can reuse the same buffer, dispatcher, decoder, fault analyzer, and stats pipeline.
+```
+
+---
+
+## Week 6 Day 4 Core Interview Summary
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+BFS is useful for level-by-level problems such as spreading, shortest paths, and time-step simulations. Rotting Oranges uses BFS because each BFS level represents one minute of spread. In the CAN decoder, the circular buffer acts like a receive queue: frames are pushed in, popped out, dispatched by CAN ID, decoded, analyzed for faults, and counted in `DecoderStats`.

@@ -1316,3 +1316,302 @@ My answer:
 Reference answer:
 
 Iterative DFS performs depth-first traversal using an explicit stack instead of recursive calls. This is useful when recursion depth or stack memory is a concern. In the CAN decoder project, ID `0x200` adds vehicle telemetry data such as `speed_raw`, `rpm`, `gear`, `throttle_percent`, `brake_percent`, and a counter. The counter helps detect stale or missing frames, while `speed_raw` can later be scaled into a physical speed value.
+---
+
+# Day 4 — BFS Spread and Buffer to Dispatcher
+
+## Main goals
+
+```text
+Study BFS spread pattern.
+Solve Rotting Oranges.
+Connect the circular buffer clearly to the dispatcher pipeline.
+Read frames from log input.
+Push frames into the buffer.
+Pop frames from the buffer.
+Dispatch, decode, analyze, and print results.
+Continue using simulated logs until live USB-CAN reading is added later.
+```
+
+---
+
+## Notes questions
+
+```text
+1. What kind of problems use BFS?
+2. Why does Rotting Oranges use levels/time?
+3. How does a CAN RX buffer relate to a queue?
+```
+
+---
+
+## What kind of problems use BFS?
+
+BFS is useful for problems that spread outward in layers.
+
+Common BFS problem types:
+
+```text
+level order traversal
+shortest path in an unweighted graph
+spread over time
+nearest source problems
+grid expansion
+multi-source search
+```
+
+Examples:
+
+```text
+rotting oranges
+fire spreading
+virus spreading
+distance from nearest gate
+shortest path in a grid
+```
+
+Simple explanation:
+
+```text
+BFS is useful when the problem moves level by level or step by step.
+```
+
+---
+
+## Why does Rotting Oranges use levels/time?
+
+Rotting Oranges uses BFS because rotting spreads one step per minute.
+
+Each BFS level represents one minute.
+
+```text
+minute 0 = starting rotten oranges
+minute 1 = adjacent fresh oranges rot
+minute 2 = next layer rots
+minute 3 = next layer rots
+```
+
+Simple explanation:
+
+```text
+BFS levels naturally model time passing.
+```
+
+---
+
+## Rotting Oranges code idea
+
+```cpp
+class Solution {
+public:
+    int orangesRotting(vector<vector<int>>& grid) {
+        int rows = grid.size();
+        int cols = grid[0].size();
+
+        queue<pair<int, int>> q;
+        int fresh = 0;
+
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < cols; col++) {
+                if (grid[row][col] == 2) {
+                    q.push({row, col});
+                } else if (grid[row][col] == 1) {
+                    fresh++;
+                }
+            }
+        }
+
+        int minutes = 0;
+
+        vector<pair<int, int>> directions = {
+            {1, 0},
+            {-1, 0},
+            {0, 1},
+            {0, -1}
+        };
+
+        while (!q.empty() && fresh > 0) {
+            int level_size = q.size();
+
+            for (int i = 0; i < level_size; i++) {
+                pair<int, int> current = q.front();
+                q.pop();
+
+                int row = current.first;
+                int col = current.second;
+
+                for (const pair<int, int>& direction : directions) {
+                    int next_row = row + direction.first;
+                    int next_col = col + direction.second;
+
+                    if (next_row < 0 || next_row >= rows) {
+                        continue;
+                    }
+
+                    if (next_col < 0 || next_col >= cols) {
+                        continue;
+                    }
+
+                    if (grid[next_row][next_col] != 1) {
+                        continue;
+                    }
+
+                    grid[next_row][next_col] = 2;
+                    fresh--;
+                    q.push({next_row, next_col});
+                }
+            }
+
+            minutes++;
+        }
+
+        if (fresh > 0) {
+            return -1;
+        }
+
+        return minutes;
+    }
+};
+```
+
+---
+
+## Why level_size matters
+
+This line is important:
+
+```cpp
+int level_size = q.size();
+```
+
+It records how many rotten oranges are active for the current minute.
+
+Any new oranges added during the loop belong to the next minute.
+
+Simple explanation:
+
+```text
+level_size separates the current time step from the next time step.
+```
+
+---
+
+## How does a CAN RX buffer relate to a queue?
+
+A CAN RX buffer stores received CAN frames until the program can process them.
+
+This is similar to a queue:
+
+```text
+new frame arrives
+        ↓
+push into RX buffer
+        ↓
+program later pops frame
+        ↓
+frame is decoded
+```
+
+Simple explanation:
+
+```text
+A CAN RX buffer lets receiving and processing happen at different times.
+```
+
+---
+
+## Buffer to dispatcher flow
+
+Current project flow:
+
+```text
+CSV parser reads frame
+        ↓
+CanFrame created
+        ↓
+frame pushed into CircularBuffer
+        ↓
+frame popped from CircularBuffer
+        ↓
+frame passed to CanDispatcher
+        ↓
+dispatcher calls the correct TelemetryDecoder function
+        ↓
+FaultAnalyzer checks decoded values
+        ↓
+DecoderStats records summary
+```
+
+Simple explanation:
+
+```text
+The buffer temporarily stores frames, and the dispatcher decides which decoder handles each frame.
+```
+
+---
+
+## Why buffer before dispatching?
+
+Using a buffer separates input from processing.
+
+Input stage:
+
+```text
+read frames from CSV or future USB-CAN source
+```
+
+Processing stage:
+
+```text
+validate, dispatch, decode, analyze, print stats
+```
+
+This makes the code closer to a real embedded or telemetry pipeline.
+
+Simple explanation:
+
+```text
+The buffer lets the program collect frames first and process them in order later.
+```
+
+---
+
+## Simulated logs for now
+
+For now, the project still uses:
+
+```text
+data/sample_can_log.csv
+```
+
+Later hardware path:
+
+```text
+USB-CAN output
+        ↓
+CSV file
+        ↓
+decoder
+```
+
+Future live path:
+
+```text
+USB-CAN live input
+        ↓
+decoder
+```
+
+Simple explanation:
+
+```text
+Simulated logs keep the software pipeline testable before live CAN reading is added.
+```
+
+---
+
+## Day 4 main interview idea
+
+```text
+BFS is useful for level-by-level problems such as spreading, shortest paths, and time-step simulations. Rotting Oranges uses BFS because each BFS level represents one minute of spread. In the CAN decoder, the circular buffer acts like a receive queue: frames are pushed in, popped out, dispatched by CAN ID, decoded, analyzed for faults, and counted in DecoderStats.
+```

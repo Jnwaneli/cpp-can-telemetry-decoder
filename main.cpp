@@ -1,4 +1,3 @@
-#include <array>
 #include <cstdint>
 #include <iomanip>
 #include <iostream>
@@ -6,7 +5,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "bit_utils.hpp"
 #include "can_dispatcher.hpp"
 #include "can_frame.hpp"
 #include "can_log_parser.hpp"
@@ -15,14 +13,6 @@
 #include "decoder_stats.hpp"
 #include "parser_state.hpp"
 #include "telemetry_decoder.hpp"
-
-int factorial(int n) {
-    if (n <= 1) {
-        return 1;
-    }
-
-    return n * factorial(n - 1);
-}
 
 void print_parser_state(ParserState state) {
     std::cout << "Parser State: "
@@ -38,121 +28,11 @@ std::vector<CanFrame> create_fallback_can_log() {
         {0x100, 8, {0x20, 0x03, 0x40, 0x06, 0x80, 0x09, 0x07, 0x02}},
         {0x101, 8, {0xE0, 0x2E, 0x90, 0x01, 0x00, 0x00, 0x00, 0x00}},
         {0x100, 8, {0x34, 0x12, 0x78, 0x05, 0x21, 0x09, 0x07, 0x03}},
-        {0x102, 8, {0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00}},
+        {0x200, 8, {0xD2, 0x04, 0xAC, 0x0D, 0x03, 0x2D, 0x00, 0x04}},
         {0x101, 8, {0xC8, 0x32, 0x2C, 0x01, 0x00, 0x00, 0x00, 0x00}},
         {0x999, 8, {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}},
         {0x100, 4, {0x00, 0x08, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00}}
     };
-}
-
-void bitExperiment() {
-    std::cout << "Bit experiment:" << std::endl;
-
-    std::uint8_t value = 0x00;
-    std::uint8_t mask = 0x04;
-
-    std::cout << "Initial value: 0x"
-              << std::hex
-              << static_cast<int>(value)
-              << std::dec
-              << std::endl;
-
-    value |= mask;
-
-    std::cout << "After set bit 2: 0x"
-              << std::hex
-              << static_cast<int>(value)
-              << std::dec
-              << std::endl;
-
-    bool bit_2_set = get_bit(value, 2);
-
-    std::cout << "Bit 2 set? "
-              << (bit_2_set ? "yes" : "no")
-              << std::endl;
-
-    value ^= mask;
-
-    std::cout << "After toggle bit 2: 0x"
-              << std::hex
-              << static_cast<int>(value)
-              << std::dec
-              << std::endl;
-
-    value |= mask;
-
-    std::cout << "After set bit 2 again: 0x"
-              << std::hex
-              << static_cast<int>(value)
-              << std::dec
-              << std::endl;
-
-    value &= static_cast<std::uint8_t>(~mask);
-
-    std::cout << "After clear bit 2: 0x"
-              << std::hex
-              << static_cast<int>(value)
-              << std::dec
-              << std::endl;
-
-    std::uint8_t status = 0x85;
-    std::uint8_t error_mask = 0x80;
-
-    std::cout << "Status byte: 0x"
-              << std::hex
-              << static_cast<int>(status)
-              << std::dec
-              << std::endl;
-
-    std::cout << "Error mask set? "
-              << (is_mask_set(status, error_mask) ? "yes" : "no")
-              << std::endl;
-
-    std::cout << std::endl;
-}
-
-void recursionExperiment() {
-    std::cout << "Recursion experiment:" << std::endl;
-
-    std::cout << "factorial(5): "
-              << factorial(5)
-              << std::endl;
-
-    std::cout << std::endl;
-}
-
-void arrayExperiment() {
-    std::cout << "Array experiment:" << std::endl;
-
-    std::uint8_t raw_data[8] = {
-        0x00, 0x08, 0x10, 0x00, 0xFF, 0x0A, 0x01, 0x05
-    };
-
-    std::array<std::uint8_t, 8> cpp_data = {
-        0x00, 0x08, 0x10, 0x00, 0xFF, 0x0A, 0x01, 0x05
-    };
-
-    std::cout << "Raw array first byte: 0x"
-              << std::hex
-              << static_cast<int>(raw_data[0])
-              << std::dec
-              << std::endl;
-
-    std::cout << "std::array first byte: 0x"
-              << std::hex
-              << static_cast<int>(cpp_data[0])
-              << std::dec
-              << std::endl;
-
-    std::cout << "Raw array size using sizeof: "
-              << sizeof(raw_data) / sizeof(raw_data[0])
-              << std::endl;
-
-    std::cout << "std::array size using .size(): "
-              << cpp_data.size()
-              << std::endl;
-
-    std::cout << std::endl;
 }
 
 std::string frame_type_name(std::uint32_t id) {
@@ -309,21 +189,7 @@ void process_buffered_frames(CircularBuffer& rx_buffer,
     }
 }
 
-int main() {
-    bitExperiment();
-    recursionExperiment();
-    arrayExperiment();
-
-    std::vector<CanFrame> can_log = load_can_log_from_csv("data/sample_can_log.csv");
-
-    if (can_log.empty()) {
-        std::cout << "Using fallback built-in CAN log."
-                  << std::endl
-                  << std::endl;
-
-        can_log = create_fallback_can_log();
-    }
-
+void run_decoder_pipeline(const std::vector<CanFrame>& can_log) {
     CircularBuffer rx_buffer;
     TelemetryDecoder decoder;
     CanDispatcher dispatcher(decoder);
@@ -337,6 +203,20 @@ int main() {
               << std::endl;
 
     stats.print();
+}
+
+int main() {
+    std::vector<CanFrame> can_log = load_can_log_from_csv("data/sample_can_log.csv");
+
+    if (can_log.empty()) {
+        std::cout << "Using fallback built-in CAN log."
+                  << std::endl
+                  << std::endl;
+
+        can_log = create_fallback_can_log();
+    }
+
+    run_decoder_pipeline(can_log);
 
     return 0;
 }
