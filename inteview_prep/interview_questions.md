@@ -9371,3 +9371,342 @@ My answer:
 Reference answer:
 
 BFS is useful for level-by-level problems such as spreading, shortest paths, and time-step simulations. Rotting Oranges uses BFS because each BFS level represents one minute of spread. In the CAN decoder, the circular buffer acts like a receive queue: frames are pushed in, popped out, dispatched by CAN ID, decoded, analyzed for faults, and counted in `DecoderStats`.
+---
+
+# Week 6 Day 5 — Clone Graph and FaultReport
+
+## Interview questions
+
+```text
+1. Why does Clone Graph need a map?
+2. What does the map store in Clone Graph?
+3. What problem happens if Clone Graph does not use a map?
+4. What is FaultReport?
+5. Why store faults instead of only printing immediately?
+6. What is the advantage of collecting faults before printing?
+7. Which part of the project detects faults now?
+8. Which part of the project prints faults now?
+9. How does FaultReport help DecoderStats?
+10. How could FaultReport be useful later?
+```
+
+---
+
+## Why does Clone Graph need a map?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Clone Graph needs a map because graphs can contain cycles and shared nodes.
+
+The map remembers which original nodes have already been cloned.
+
+Simple version:
+
+```text
+The map prevents cloning the same node again and again.
+```
+
+---
+
+## What does the map store in Clone Graph?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The map stores:
+
+```text
+key = original node pointer
+value = cloned node pointer
+```
+
+Example:
+
+```cpp
+unordered_map<Node*, Node*> cloned;
+```
+
+Simple version:
+
+```text
+The map connects each original node to its copy.
+```
+
+---
+
+## What problem happens if Clone Graph does not use a map?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Without a map, the algorithm can clone the same node multiple times.
+
+It can also recurse forever if the graph has a cycle.
+
+Simple version:
+
+```text
+Without a map, cycles can cause infinite recursion.
+```
+
+---
+
+## What is FaultReport?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`FaultReport` is a struct that stores fault information.
+
+```cpp
+struct FaultReport {
+    bool has_fault;
+    std::string message;
+};
+```
+
+Simple version:
+
+```text
+FaultReport stores whether a fault happened and what the message is.
+```
+
+---
+
+## Why store faults instead of only printing immediately?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Stored faults can be reused.
+
+They can be:
+
+```text
+counted
+printed later
+filtered
+saved
+tested
+sent to another system
+```
+
+Simple version:
+
+```text
+Stored faults are data, not just console output.
+```
+
+---
+
+## What is the advantage of collecting faults before printing?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Collecting faults before printing separates fault detection from output formatting.
+
+```text
+FaultAnalyzer = detects faults
+main.cpp = prints faults
+```
+
+Simple version:
+
+```text
+The analyzer finds problems; the main pipeline decides how to report them.
+```
+
+---
+
+## Which part of the project detects faults now?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`FaultAnalyzer` detects faults.
+
+It returns `FaultReport` objects instead of printing immediately.
+
+Simple version:
+
+```text
+FaultAnalyzer detects faults and returns reports.
+```
+
+---
+
+## Which part of the project prints faults now?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`main.cpp` prints the collected fault reports.
+
+The print helper is:
+
+```cpp
+print_fault_reports(reports);
+```
+
+Simple version:
+
+```text
+main.cpp controls fault output.
+```
+
+---
+
+## How does FaultReport help DecoderStats?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The program can count how many fault reports have `has_fault == true`.
+
+Then it can pass that number into:
+
+```cpp
+stats.add_faults(decoded_fault_count);
+```
+
+Simple version:
+
+```text
+FaultReport makes fault counting cleaner.
+```
+
+---
+
+## How could FaultReport be useful later?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Later, `FaultReport` could be extended with:
+
+```text
+severity
+CAN ID
+timestamp
+fault code
+raw value
+decoded value
+```
+
+It could also be saved to a log file, displayed in a dashboard, or used in unit tests.
+
+Simple version:
+
+```text
+FaultReport can grow into a real diagnostics record.
+```
+
+---
+
+## Week 6 Day 5 Core Interview Summary
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Clone Graph needs a map because graphs can contain cycles and shared neighbors. The map prevents duplicate clones and infinite recursion. In the CAN decoder project, `FaultReport` stores fault information as data, allowing the program to collect, count, print, save, or test faults instead of only printing immediately inside `FaultAnalyzer`.

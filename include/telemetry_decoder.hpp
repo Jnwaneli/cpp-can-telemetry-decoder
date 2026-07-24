@@ -1,9 +1,10 @@
 #pragma once
 
-#include <cstddef>
+#include <vector>
 
 #include "can_frame.hpp"
 #include "fault_analyzer.hpp"
+#include "fault_report.hpp"
 
 class TelemetryDecoder {
 public:
@@ -11,10 +12,10 @@ public:
 
     void record_frame_seen();
 
-    std::size_t decode_0x100(const CanFrame& frame);
-    std::size_t decode_0x101(const CanFrame& frame);
-    std::size_t decode_0x102(const CanFrame& frame);
-    std::size_t decode_0x200(const CanFrame& frame);
+    std::vector<FaultReport> decode_0x100(const CanFrame& frame);
+    std::vector<FaultReport> decode_0x101(const CanFrame& frame);
+    std::vector<FaultReport> decode_0x102(const CanFrame& frame);
+    std::vector<FaultReport> decode_0x200(const CanFrame& frame);
 
     std::size_t frames_seen() const;
 

@@ -1,73 +1,53 @@
 #include "fault_analyzer.hpp"
 
-#include <iostream>
-
-std::size_t FaultAnalyzer::check_analog_faults(const AnalogData& data) {
-    std::size_t fault_count = 0;
+std::vector<FaultReport> FaultAnalyzer::check_analog_faults(const AnalogData& data) {
+    std::vector<FaultReport> reports;
 
     if (data.ain1_raw > 4095) {
-        std::cout << "FAULT: AIN1 raw value out of 12-bit ADC range" << std::endl;
-        fault_count++;
+        reports.push_back({true, "AIN1 raw value out of 12-bit ADC range"});
     }
 
     if (data.ain2_raw > 4095) {
-        std::cout << "FAULT: AIN2 raw value out of 12-bit ADC range" << std::endl;
-        fault_count++;
+        reports.push_back({true, "AIN2 raw value out of 12-bit ADC range"});
     }
 
     if (data.ain3_raw > 4095) {
-        std::cout << "FAULT: AIN3 raw value out of 12-bit ADC range" << std::endl;
-        fault_count++;
+        reports.push_back({true, "AIN3 raw value out of 12-bit ADC range"});
     }
 
     if (!data.sensor1_valid) {
-        std::cout << "FAULT: Sensor 1 invalid" << std::endl;
-        fault_count++;
+        reports.push_back({true, "Sensor 1 invalid"});
     }
 
     if (!data.sensor2_valid) {
-        std::cout << "FAULT: Sensor 2 invalid" << std::endl;
-        fault_count++;
+        reports.push_back({true, "Sensor 2 invalid"});
     }
 
     if (!data.sensor3_valid) {
-        std::cout << "FAULT: Sensor 3 invalid" << std::endl;
-        fault_count++;
+        reports.push_back({true, "Sensor 3 invalid"});
     }
 
     if (data.error_flag_set) {
-        std::cout << "FAULT: Error flag set in analog status byte" << std::endl;
-        fault_count++;
+        reports.push_back({true, "Error flag set in analog status byte"});
     }
 
-    if (fault_count == 0) {
-        std::cout << "Fault Check: Analog OK" << std::endl;
-    }
-
-    return fault_count;
+    return reports;
 }
 
-std::size_t FaultAnalyzer::check_battery_temp_faults(double voltage, double temperature) {
-    std::size_t fault_count = 0;
+std::vector<FaultReport> FaultAnalyzer::check_battery_temp_faults(double voltage, double temperature) {
+    std::vector<FaultReport> reports;
 
     if (voltage < 10.5) {
-        std::cout << "FAULT: Battery voltage too low" << std::endl;
-        fault_count++;
+        reports.push_back({true, "Battery voltage too low"});
     }
 
     if (voltage > 14.8) {
-        std::cout << "FAULT: Battery voltage too high" << std::endl;
-        fault_count++;
+        reports.push_back({true, "Battery voltage too high"});
     }
 
     if (temperature > 80.0) {
-        std::cout << "FAULT: Temperature too high" << std::endl;
-        fault_count++;
+        reports.push_back({true, "Temperature too high"});
     }
 
-    if (fault_count == 0) {
-        std::cout << "Fault Check: Battery/Temperature OK" << std::endl;
-    }
-
-    return fault_count;
+    return reports;
 }

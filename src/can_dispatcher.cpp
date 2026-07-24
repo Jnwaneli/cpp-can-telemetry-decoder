@@ -1,12 +1,10 @@
 #include "can_dispatcher.hpp"
 
-#include <iostream>
-
 CanDispatcher::CanDispatcher(TelemetryDecoder& decoder)
     : decoder_(decoder) {
 }
 
-std::size_t CanDispatcher::dispatch(const CanFrame& frame) {
+std::vector<FaultReport> CanDispatcher::dispatch(const CanFrame& frame) {
     decoder_.record_frame_seen();
 
     switch (frame.id) {
@@ -23,7 +21,6 @@ std::size_t CanDispatcher::dispatch(const CanFrame& frame) {
             return decoder_.decode_0x200(frame);
 
         default:
-            std::cout << "Type: Unknown dispatch route" << std::endl;
-            return 0;
+            return {{true, "Unknown dispatch route"}};
     }
 }

@@ -11,6 +11,7 @@
 #include "can_validation.hpp"
 #include "circular_buffer.hpp"
 #include "decoder_stats.hpp"
+#include "fault_report.hpp"
 #include "parser_state.hpp"
 #include "telemetry_decoder.hpp"
 
@@ -50,6 +51,28 @@ std::string frame_type_name(std::uint32_t id) {
     }
 
     return "Unknown";
+}
+
+std::size_t count_faults(const std::vector<FaultReport>& reports) {
+    std::size_t count = 0;
+
+    for (const FaultReport& report : reports) {
+        if (report.has_fault) {
+            count++;
+        }
+    }
+
+    return count;
+}
+
+void print_fault_reports(const std::vector<FaultReport>& reports) {
+    for (const FaultReport& report : reports) {
+        if (report.has_fault) {
+            std::cout << "FAULT: "
+                      << report.message
+                      << std::endl;
+        }
+    }
 }
 
 void print_payload(const CanFrame& frame) {
@@ -96,30 +119,27 @@ void process_frame(const CanFrame& frame, CanDispatcher& dispatcher, DecoderStat
 
     print_frame_header(frame);
 
-    std::vector<std::string> faults;
+    std::vector<FaultReport> validation_reports;
 
     print_parser_state(ParserState::VALIDATE_ID);
 
     if (!is_known_id(frame.id)) {
-        faults.push_back("Unknown CAN ID");
+        validation_reports.push_back({true, "Unknown CAN ID"});
         stats.record_unknown_id();
     }
 
     print_parser_state(ParserState::VALIDATE_DLC);
 
     if (!has_valid_dlc(frame)) {
-        faults.push_back("Invalid DLC");
+        validation_reports.push_back({true, "Invalid DLC"});
         stats.record_invalid_dlc();
     }
 
-    if (!faults.empty()) {
+    if (!validation_reports.empty()) {
         print_parser_state(ParserState::PRINT_RESULT);
 
         std::cout << "Frame Validation: FAULT" << std::endl;
-
-        for (const std::string& fault : faults) {
-            std::cout << "FAULT: " << fault << std::endl;
-        }
+        print_fault_reports(validation_reports);
 
         return;
     }
@@ -128,18 +148,23 @@ void process_frame(const CanFrame& frame, CanDispatcher& dispatcher, DecoderStat
 
     print_parser_state(ParserState::DECODE);
 
-    std::size_t decoded_faults = dispatcher.dispatch(frame);
+    std::vector<FaultReport> decoded_reports = dispatcher.dispatch(frame);
 
     print_parser_state(ParserState::ANALYZE_FAULTS);
 
-    stats.add_faults(decoded_faults);
+    std::size_t decoded_fault_count = count_faults(decoded_reports);
+    stats.add_faults(decoded_fault_count);
 
     print_parser_state(ParserState::PRINT_RESULT);
 
-    if (decoded_faults > 0) {
+    if (decoded_fault_count > 0) {
         std::cout << "Decoded Faults: "
-                  << decoded_faults
+                  << decoded_fault_count
                   << std::endl;
+
+        print_fault_reports(decoded_reports);
+    } else {
+        std::cout << "Fault Check: OK" << std::endl;
     }
 
     std::cout << "Frame Validation: OK" << std::endl;
