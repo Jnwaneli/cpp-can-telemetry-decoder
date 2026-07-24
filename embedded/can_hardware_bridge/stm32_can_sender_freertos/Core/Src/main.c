@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -44,6 +45,34 @@
 COM_InitTypeDef BspCOMInit;
 FDCAN_HandleTypeDef hfdcan1;
 
+/* Definitions for SignalGenerator */
+osThreadId_t SignalGeneratorHandle;
+const osThreadAttr_t SignalGenerator_attributes = {
+  .name = "SignalGenerator",
+  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 128 * 4
+};
+/* Definitions for ProcessingTask */
+osThreadId_t ProcessingTaskHandle;
+const osThreadAttr_t ProcessingTask_attributes = {
+  .name = "ProcessingTask",
+  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 128 * 4
+};
+/* Definitions for CanTxTask */
+osThreadId_t CanTxTaskHandle;
+const osThreadAttr_t CanTxTask_attributes = {
+  .name = "CanTxTask",
+  .priority = (osPriority_t) osPriorityAboveNormal,
+  .stack_size = 256 * 4
+};
+/* Definitions for StatusLedTask */
+osThreadId_t StatusLedTaskHandle;
+const osThreadAttr_t StatusLedTask_attributes = {
+  .name = "StatusLedTask",
+  .priority = (osPriority_t) osPriorityLow,
+  .stack_size = 128 * 4
+};
 /* USER CODE BEGIN PV */
 FDCAN_TxHeaderTypeDef txHeader;
 
@@ -61,6 +90,11 @@ uint8_t txData[8] = {
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_FDCAN1_Init(void);
+void StartSignalGeneratorTask(void *argument);
+void StartProcessingTask(void *argument);
+void StartCanTxTask(void *argument);
+void StartStatusLedTask(void *argument);
+
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -101,11 +135,6 @@ int main(void)
   MX_GPIO_Init();
   MX_FDCAN1_Init();
   /* USER CODE BEGIN 2 */
-  if (HAL_FDCAN_Start(&hfdcan1) != HAL_OK)
-  {
-      Error_Handler();
-  }
-
   txHeader.Identifier = 0x100;
   txHeader.IdType = FDCAN_STANDARD_ID;
   txHeader.TxFrameType = FDCAN_DATA_FRAME;
@@ -116,7 +145,52 @@ int main(void)
   txHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
   txHeader.MessageMarker = 0;
 
+  if (HAL_FDCAN_Start(&hfdcan1) != HAL_OK)
+  {
+      Error_Handler();
+  }
+
   /* USER CODE END 2 */
+
+  /* Init scheduler */
+  osKernelInitialize();
+
+  /* USER CODE BEGIN RTOS_MUTEX */
+  /* add mutexes, ... */
+  /* USER CODE END RTOS_MUTEX */
+
+  /* USER CODE BEGIN RTOS_SEMAPHORES */
+  /* add semaphores, ... */
+  /* USER CODE END RTOS_SEMAPHORES */
+
+  /* USER CODE BEGIN RTOS_TIMERS */
+  /* start timers, add new ones, ... */
+  /* USER CODE END RTOS_TIMERS */
+
+  /* USER CODE BEGIN RTOS_QUEUES */
+  /* add queues, ... */
+  /* USER CODE END RTOS_QUEUES */
+
+  /* Create the thread(s) */
+  /* creation of SignalGenerator */
+  SignalGeneratorHandle = osThreadNew(StartSignalGeneratorTask, NULL, &SignalGenerator_attributes);
+
+  /* creation of ProcessingTask */
+  ProcessingTaskHandle = osThreadNew(StartProcessingTask, NULL, &ProcessingTask_attributes);
+
+  /* creation of CanTxTask */
+  CanTxTaskHandle = osThreadNew(StartCanTxTask, NULL, &CanTxTask_attributes);
+
+  /* creation of StatusLedTask */
+  StatusLedTaskHandle = osThreadNew(StartStatusLedTask, NULL, &StatusLedTask_attributes);
+
+  /* USER CODE BEGIN RTOS_THREADS */
+  /* add threads, ... */
+  /* USER CODE END RTOS_THREADS */
+
+  /* USER CODE BEGIN RTOS_EVENTS */
+  /* add events, ... */
+  /* USER CODE END RTOS_EVENTS */
 
   /* Initialize leds */
   BSP_LED_Init(LED_GREEN);
@@ -135,13 +209,18 @@ int main(void)
     Error_Handler();
   }
 
+  /* Start scheduler */
+  osKernelStart();
+
+  /* We should never get here as control is now taken by the scheduler */
+
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-      /* USER CODE END WHILE */
+    /* USER CODE END WHILE */
 
-      /* USER CODE BEGIN 3 */
+    /* USER CODE BEGIN 3 */
       if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader, txData) != HAL_OK)
       {
           Error_Handler();
@@ -218,7 +297,7 @@ static void MX_FDCAN1_Init(void)
   hfdcan1.Init.ClockDivider = FDCAN_CLOCK_DIV1;
   hfdcan1.Init.FrameFormat = FDCAN_FRAME_CLASSIC;
   hfdcan1.Init.Mode = FDCAN_MODE_NORMAL;
-  hfdcan1.Init.AutoRetransmission = ENABLE;
+  hfdcan1.Init.AutoRetransmission = DISABLE;
   hfdcan1.Init.TransmitPause = DISABLE;
   hfdcan1.Init.ProtocolException = DISABLE;
   hfdcan1.Init.NominalPrescaler = 20;
@@ -267,6 +346,102 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 
 /* USER CODE END 4 */
+
+/* USER CODE BEGIN Header_StartSignalGeneratorTask */
+/**
+  * @brief  Function implementing the SignalGenerator thread.
+  * @param  argument: Not used
+  * @retval None
+  */
+/* USER CODE END Header_StartSignalGeneratorTask */
+void StartSignalGeneratorTask(void *argument)
+{
+  /* USER CODE BEGIN 5 */
+  /* Infinite loop */
+	for(;;)
+	  {
+	    osDelay(10);
+	  }
+  /* USER CODE END 5 */
+}
+
+/* USER CODE BEGIN Header_StartProcessingTask */
+/**
+* @brief Function implementing the ProcessingTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartProcessingTask */
+void StartProcessingTask(void *argument)
+{
+  /* USER CODE BEGIN StartProcessingTask */
+  /* Infinite loop */
+	for(;;)
+	  {
+	    osDelay(10);
+	  }
+  /* USER CODE END StartProcessingTask */
+}
+
+/* USER CODE BEGIN Header_StartCanTxTask */
+/**
+* @brief Function implementing the CanTxTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartCanTxTask */
+void StartCanTxTask(void *argument)
+{
+  /* USER CODE BEGIN StartCanTxTask */
+  /* Infinite loop */
+	for(;;)
+	  {
+	    HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader, txData);
+	    osDelay(1000);
+	  }
+  /* USER CODE END StartCanTxTask */
+}
+
+/* USER CODE BEGIN Header_StartStatusLedTask */
+/**
+* @brief Function implementing the StatusLedTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartStatusLedTask */
+void StartStatusLedTask(void *argument)
+{
+  /* USER CODE BEGIN StartStatusLedTask */
+  /* Infinite loop */
+	 for(;;)
+	  {
+	    BSP_LED_Toggle(LED_GREEN);
+	    osDelay(500);
+	  }
+  /* USER CODE END StartStatusLedTask */
+}
+
+/**
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM6 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  /* USER CODE BEGIN Callback 0 */
+
+  /* USER CODE END Callback 0 */
+  if (htim->Instance == TIM6)
+  {
+    HAL_IncTick();
+  }
+  /* USER CODE BEGIN Callback 1 */
+
+  /* USER CODE END Callback 1 */
+}
 
 /**
   * @brief  This function is executed in case of error occurrence.

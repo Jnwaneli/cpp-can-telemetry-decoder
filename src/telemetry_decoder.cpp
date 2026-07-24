@@ -5,17 +5,46 @@
 #include <cstdint>
 #include <iomanip>
 #include <iostream>
+#include <string>
 
 namespace {
 constexpr std::uint8_t SENSOR1_VALID_MASK = 0x01;
 constexpr std::uint8_t SENSOR2_VALID_MASK = 0x02;
 constexpr std::uint8_t SENSOR3_VALID_MASK = 0x04;
 constexpr std::uint8_t ERROR_FLAG_MASK = 0x80;
+
+void print_stats_line(const std::string& label, const SignalStats& stats) {
+    std::cout << label << ": ";
+
+    if (!stats.has_samples()) {
+        std::cout << "no samples" << std::endl;
+        return;
+    }
+
+    std::cout << "min="
+              << stats.min_value
+              << ", max="
+              << stats.max_value
+              << ", avg="
+              << std::fixed
+              << std::setprecision(2)
+              << stats.average
+              << ", count="
+              << stats.count
+              << std::defaultfloat
+              << std::setprecision(6)
+              << std::endl;
+}
 }
 
 TelemetryDecoder::TelemetryDecoder()
     : fault_analyzer_(),
-      frames_seen_(0) {
+      frames_seen_(0),
+      ain1_stats_(),
+      ain2_stats_(),
+      ain3_stats_(),
+      battery_mV_stats_(),
+      temperature_deciC_stats_() {
 }
 
 void TelemetryDecoder::record_frame_seen() {
@@ -24,6 +53,39 @@ void TelemetryDecoder::record_frame_seen() {
 
 std::size_t TelemetryDecoder::frames_seen() const {
     return frames_seen_;
+}
+
+void TelemetryDecoder::print_signal_stats() const {
+    std::cout << std::endl;
+    std::cout << "Signal Stats:" << std::endl;
+
+    print_stats_line("AIN1_RAW", ain1_stats_);
+    print_stats_line("AIN2_RAW", ain2_stats_);
+    print_stats_line("AIN3_RAW", ain3_stats_);
+    print_stats_line("Battery_mV", battery_mV_stats_);
+    print_stats_line("Temperature_deciC", temperature_deciC_stats_);
+
+    if (battery_mV_stats_.has_samples()) {
+        std::cout << "Battery average: "
+                  << std::fixed
+                  << std::setprecision(2)
+                  << battery_mV_stats_.average / 1000.0
+                  << " V"
+                  << std::defaultfloat
+                  << std::setprecision(6)
+                  << std::endl;
+    }
+
+    if (temperature_deciC_stats_.has_samples()) {
+        std::cout << "Temperature average: "
+                  << std::fixed
+                  << std::setprecision(1)
+                  << temperature_deciC_stats_.average / 10.0
+                  << " C"
+                  << std::defaultfloat
+                  << std::setprecision(6)
+                  << std::endl;
+    }
 }
 
 std::vector<FaultReport> TelemetryDecoder::decode_0x100(const CanFrame& frame) {
@@ -55,6 +117,10 @@ std::vector<FaultReport> TelemetryDecoder::decode_0x100(const CanFrame& frame) {
         sensor3_valid,
         error_flag_set
     };
+
+    ain1_stats_.update(data.ain1_raw);
+    ain2_stats_.update(data.ain2_raw);
+    ain3_stats_.update(data.ain3_raw);
 
     std::cout << "Type: Analog Inputs" << std::endl;
 
@@ -110,6 +176,9 @@ std::vector<FaultReport> TelemetryDecoder::decode_0x101(const CanFrame& frame) {
 
     std::uint16_t battery_mV = pack_u16(frame.data[0], frame.data[1]);
     std::uint16_t temperature_deciC = pack_u16(frame.data[2], frame.data[3]);
+
+    battery_mV_stats_.update(battery_mV);
+    temperature_deciC_stats_.update(temperature_deciC);
 
     double battery_V = battery_mV / 1000.0;
     double temperature_C = temperature_deciC / 10.0;
