@@ -1837,3 +1837,612 @@ Faults become structured data before they become printed output.
 ```text
 Clone Graph needs a map because graphs can contain cycles and shared neighbors. The map prevents duplicate clones and infinite recursion. In the CAN decoder project, FaultReport stores fault information as data, allowing the program to collect, count, print, save, or test faults instead of only printing immediately inside FaultAnalyzer.
 ```
+---
+
+# Day 6 — Topological Sort and Summary Report
+
+## Main goals
+
+```text
+Study topological sort.
+Solve Course Schedule.
+Print decoded report per frame.
+Print summary statistics.
+Document hardware and log status honestly.
+Finalize Week 6 deliverables.
+```
+
+---
+
+## Notes questions
+
+```text
+1. What is a graph?
+2. What is an adjacency list?
+3. DFS vs BFS?
+4. Why use a visited set?
+5. What is a dispatcher?
+6. Why read from logs before live integration?
+7. How is CAN traffic similar to message dispatching?
+8. What is topological sort?
+9. How does the circular buffer connect to the dispatcher?
+10. Why collect faults before printing?
+```
+
+---
+
+## What is a graph?
+
+A graph is a data structure made of nodes and edges.
+
+```text
+node = item
+edge = connection
+neighbor = directly connected node
+```
+
+Simple explanation:
+
+```text
+A graph represents how things are connected.
+```
+
+---
+
+## What is an adjacency list?
+
+An adjacency list stores each node with a list of its neighbors.
+
+C++ example:
+
+```cpp
+std::unordered_map<int, std::vector<int>> graph;
+```
+
+Simple explanation:
+
+```text
+An adjacency list maps each node to the nodes connected to it.
+```
+
+---
+
+## DFS vs BFS
+
+DFS explores deeply before backtracking.
+
+BFS explores level by level.
+
+```text
+DFS = depth first, often recursion or stack
+BFS = breadth first, usually queue
+```
+
+Simple explanation:
+
+```text
+DFS goes deep first; BFS spreads level by level.
+```
+
+---
+
+## Why use a visited set?
+
+A visited set prevents the program from processing the same node repeatedly.
+
+It is especially important when graphs have cycles.
+
+Simple explanation:
+
+```text
+Visited tracking prevents repeated work and infinite loops.
+```
+
+---
+
+## What is a dispatcher?
+
+A dispatcher receives a message and routes it to the correct handler.
+
+In this project:
+
+```text
+CanDispatcher receives a CanFrame
+CanDispatcher checks the CAN ID
+CanDispatcher calls the correct TelemetryDecoder function
+```
+
+Simple explanation:
+
+```text
+A dispatcher decides which function should handle a message.
+```
+
+---
+
+## Why read from logs before live integration?
+
+Log input is repeatable.
+
+The same file can be tested many times with the same result.
+
+This makes it easier to debug:
+
+```text
+parsing
+validation
+dispatching
+decoding
+fault reporting
+statistics
+```
+
+Simple explanation:
+
+```text
+Logs let me prove the software pipeline before adding live USB-CAN input.
+```
+
+---
+
+## How is CAN traffic similar to message dispatching?
+
+CAN frames have IDs.
+
+Each ID represents a message type.
+
+Examples:
+
+```text
+0x100 = Analog Inputs
+0x101 = Battery and Temperature
+0x102 = Status Flags
+0x200 = Vehicle Telemetry
+```
+
+The dispatcher uses the CAN ID to route the frame.
+
+Simple explanation:
+
+```text
+CAN IDs act like message types.
+```
+
+---
+
+## What is topological sort?
+
+Topological sort orders directed graph nodes so dependencies come first.
+
+Example:
+
+```text
+prerequisite course -> next course
+```
+
+Topological sort only works if the graph has no cycle.
+
+Simple explanation:
+
+```text
+Topological sort finds a valid order for dependency-based tasks.
+```
+
+---
+
+## Course Schedule connection
+
+LeetCode 207 asks whether all courses can be completed.
+
+If prerequisites form a cycle, then there is no valid order.
+
+Example cycle:
+
+```text
+Course 0 needs Course 1
+Course 1 needs Course 0
+```
+
+Simple explanation:
+
+```text
+Course Schedule checks whether the prerequisite graph has a cycle.
+```
+
+---
+
+## How does the circular buffer connect to the dispatcher?
+
+The circular buffer stores frames before processing.
+
+Current flow:
+
+```text
+CanLogParser
+        ↓
+CanFrame
+        ↓
+CircularBuffer
+        ↓
+CanDispatcher
+        ↓
+TelemetryDecoder
+```
+
+Simple explanation:
+
+```text
+The buffer holds frames, and the dispatcher routes each popped frame.
+```
+
+---
+
+## Why collect faults before printing?
+
+Collecting faults separates detection from output.
+
+```text
+FaultAnalyzer = detects faults
+FaultReport = stores faults
+main.cpp = prints or summarizes faults
+```
+
+Simple explanation:
+
+```text
+Faults become reusable data before they become console output.
+```
+
+---
+
+## Week 6 deliverables
+
+```text
+CANDispatcher
+CSV/log parser
+0x200 decoder
+FaultReport
+FrameReport
+summary report
+Week 6 notes
+Week 6 interview questions
+hardware/log status documentation
+```
+
+---
+
+## Day 6 main interview idea
+
+```text
+Week 6 connected graph concepts to the CAN decoder project. Graphs use nodes and edges, DFS and BFS traverse connected structures, and topological sort handles dependency ordering. In the CAN project, CAN frames are parsed from logs, pushed into a circular buffer, dispatched by ID, decoded, analyzed for faults, collected into FaultReport and FrameReport structures, and summarized with DecoderStats.
+```
+---
+
+# Week 6 Day 6 — Topological Sort and Summary Report
+
+## Interview questions
+
+```text
+1. What is a graph?
+2. What is an adjacency list?
+3. What is the difference between DFS and BFS?
+4. Why use a visited set?
+5. What is a dispatcher?
+6. Why read from logs before live integration?
+7. How is CAN traffic similar to message dispatching?
+8. What is topological sort?
+9. How does the circular buffer connect to the dispatcher?
+10. Why collect faults before printing?
+```
+
+---
+
+## What is a graph?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A graph is a structure made of nodes and edges.
+
+It represents relationships or connections.
+
+Simple version:
+
+```text
+A graph shows how things are connected.
+```
+
+---
+
+## What is an adjacency list?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+An adjacency list maps each node to a list of its neighbors.
+
+Example:
+
+```cpp
+std::unordered_map<int, std::vector<int>> graph;
+```
+
+Simple version:
+
+```text
+An adjacency list stores each node with the nodes connected to it.
+```
+
+---
+
+## What is the difference between DFS and BFS?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+DFS explores as deep as possible before backtracking.
+
+BFS explores level by level.
+
+```text
+DFS = recursion or stack
+BFS = queue
+```
+
+Simple version:
+
+```text
+DFS goes deep first; BFS spreads level by level.
+```
+
+---
+
+## Why use a visited set?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A visited set prevents the program from processing the same node repeatedly.
+
+It also prevents infinite loops when graphs contain cycles.
+
+Simple version:
+
+```text
+Visited tracking prevents repeated work and infinite loops.
+```
+
+---
+
+## What is a dispatcher?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A dispatcher receives a message and routes it to the correct handler.
+
+In this project, `CanDispatcher` routes CAN frames based on CAN ID.
+
+Simple version:
+
+```text
+A dispatcher decides which function handles each message.
+```
+
+---
+
+## Why read from logs before live integration?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Logs are repeatable.
+
+The same input can be tested multiple times with the same result.
+
+This makes debugging easier before adding live USB-CAN complexity.
+
+Simple version:
+
+```text
+Logs prove the decoder pipeline before live input is added.
+```
+
+---
+
+## How is CAN traffic similar to message dispatching?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+CAN traffic contains frames with IDs.
+
+Each ID represents a message type.
+
+Examples:
+
+```text
+0x100 = Analog Inputs
+0x101 = Battery and Temperature
+0x102 = Status Flags
+0x200 = Vehicle Telemetry
+```
+
+The dispatcher uses the ID to call the correct decoder.
+
+Simple version:
+
+```text
+CAN IDs act like message types.
+```
+
+---
+
+## What is topological sort?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Topological sort orders nodes in a directed graph so dependencies come before dependent nodes.
+
+It is used for scheduling and prerequisite problems.
+
+Simple version:
+
+```text
+Topological sort finds a valid order when tasks have dependencies.
+```
+
+---
+
+## How does the circular buffer connect to the dispatcher?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Parsed CAN frames are pushed into the circular buffer.
+
+The program pops frames from the buffer in order and passes them to `CanDispatcher`.
+
+Flow:
+
+```text
+CanFrame
+        ↓
+CircularBuffer
+        ↓
+CanDispatcher
+        ↓
+TelemetryDecoder
+```
+
+Simple version:
+
+```text
+The buffer stores frames, and the dispatcher routes them after they are popped.
+```
+
+---
+
+## Why collect faults before printing?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Collecting faults turns them into reusable data.
+
+The program can count, print, save, filter, or test faults after detection.
+
+Simple version:
+
+```text
+Faults are more useful as data than as immediate print statements.
+```
+
+---
+
+## Week 6 Core Interview Summary
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Week 6 connected graph concepts to the CAN decoder project. Graphs use nodes and edges, DFS and BFS traverse connected structures, and topological sort handles dependency ordering. In the CAN project, CAN frames are parsed from logs, pushed into a circular buffer, dispatched by ID, decoded, analyzed for faults, collected into `FaultReport` and `FrameReport` structures, and summarized with `DecoderStats`.

@@ -1,6 +1,7 @@
 #include <cstdint>
 #include <iomanip>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -12,6 +13,7 @@
 #include "circular_buffer.hpp"
 #include "decoder_stats.hpp"
 #include "fault_report.hpp"
+#include "frame_report.hpp"
 #include "parser_state.hpp"
 #include "telemetry_decoder.hpp"
 
@@ -34,6 +36,17 @@ std::vector<CanFrame> create_fallback_can_log() {
         {0x999, 8, {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}},
         {0x100, 4, {0x00, 0x08, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00}}
     };
+}
+
+std::string format_can_id(std::uint32_t id) {
+    std::ostringstream output;
+
+    output << "0x"
+           << std::hex
+           << std::uppercase
+           << id;
+
+    return output.str();
 }
 
 std::string frame_type_name(std::uint32_t id) {
@@ -65,12 +78,12 @@ std::size_t count_faults(const std::vector<FaultReport>& reports) {
     return count;
 }
 
-void print_fault_reports(const std::vector<FaultReport>& reports) {
+void add_fault_messages(const std::vector<FaultReport>& reports,
+                        FrameReport& frame_report) {
     for (const FaultReport& report : reports) {
         if (report.has_fault) {
-            std::cout << "FAULT: "
-                      << report.message
-                      << std::endl;
+            frame_report.fault_messages.push_back(report.message);
+            frame_report.ok = false;
         }
     }
 }
@@ -93,10 +106,8 @@ void print_payload(const CanFrame& frame) {
 }
 
 void print_frame_header(const CanFrame& frame) {
-    std::cout << "Frame ID: 0x"
-              << std::hex
-              << frame.id
-              << std::dec
+    std::cout << "Frame ID: "
+              << format_can_id(frame.id)
               << std::endl;
 
     std::cout << "Frame Name: "
@@ -110,7 +121,49 @@ void print_frame_header(const CanFrame& frame) {
     print_payload(frame);
 }
 
-void process_frame(const CanFrame& frame, CanDispatcher& dispatcher, DecoderStats& stats) {
+void print_frame_report(const FrameReport& report) {
+    std::cout << "Frame "
+              << report.frame_number
+              << ": "
+              << format_can_id(report.can_id)
+              << " "
+              << report.frame_name
+              << " - ";
+
+    if (report.ok) {
+        std::cout << "OK" << std::endl;
+        return;
+    }
+
+    std::cout << "FAULT";
+
+    if (!report.fault_messages.empty()) {
+        std::cout << ": ";
+
+        for (std::size_t i = 0; i < report.fault_messages.size(); i++) {
+            std::cout << report.fault_messages[i];
+
+            if (i + 1 < report.fault_messages.size()) {
+                std::cout << "; ";
+            }
+        }
+    }
+
+    std::cout << std::endl;
+}
+
+FrameReport process_frame(std::size_t frame_number,
+                          const CanFrame& frame,
+                          CanDispatcher& dispatcher,
+                          DecoderStats& stats) {
+    FrameReport report{
+        frame_number,
+        frame.id,
+        frame_type_name(frame.id),
+        true,
+        {}
+    };
+
     print_parser_state(ParserState::WAIT_FOR_FRAME);
 
     stats.record_frame_received();
@@ -119,29 +172,26 @@ void process_frame(const CanFrame& frame, CanDispatcher& dispatcher, DecoderStat
 
     print_frame_header(frame);
 
-    std::vector<FaultReport> validation_reports;
-
     print_parser_state(ParserState::VALIDATE_ID);
 
     if (!is_known_id(frame.id)) {
-        validation_reports.push_back({true, "Unknown CAN ID"});
+        report.ok = false;
+        report.fault_messages.push_back("Unknown CAN ID");
         stats.record_unknown_id();
     }
 
     print_parser_state(ParserState::VALIDATE_DLC);
 
     if (!has_valid_dlc(frame)) {
-        validation_reports.push_back({true, "Invalid DLC"});
+        report.ok = false;
+        report.fault_messages.push_back("Invalid DLC");
         stats.record_invalid_dlc();
     }
 
-    if (!validation_reports.empty()) {
+    if (!report.ok) {
         print_parser_state(ParserState::PRINT_RESULT);
-
-        std::cout << "Frame Validation: FAULT" << std::endl;
-        print_fault_reports(validation_reports);
-
-        return;
+        print_frame_report(report);
+        return report;
     }
 
     stats.record_valid_frame();
@@ -155,19 +205,12 @@ void process_frame(const CanFrame& frame, CanDispatcher& dispatcher, DecoderStat
     std::size_t decoded_fault_count = count_faults(decoded_reports);
     stats.add_faults(decoded_fault_count);
 
+    add_fault_messages(decoded_reports, report);
+
     print_parser_state(ParserState::PRINT_RESULT);
+    print_frame_report(report);
 
-    if (decoded_fault_count > 0) {
-        std::cout << "Decoded Faults: "
-                  << decoded_fault_count
-                  << std::endl;
-
-        print_fault_reports(decoded_reports);
-    } else {
-        std::cout << "Fault Check: OK" << std::endl;
-    }
-
-    std::cout << "Frame Validation: OK" << std::endl;
+    return report;
 }
 
 void load_frames_into_buffer(const std::vector<CanFrame>& log, CircularBuffer& rx_buffer) {
@@ -177,18 +220,14 @@ void load_frames_into_buffer(const std::vector<CanFrame>& log, CircularBuffer& r
         bool pushed = rx_buffer.push(frame);
 
         if (pushed) {
-            std::cout << "Pushed frame ID 0x"
-                      << std::hex
-                      << frame.id
-                      << std::dec
+            std::cout << "Pushed frame ID "
+                      << format_can_id(frame.id)
                       << ". Buffer size: "
                       << rx_buffer.size()
                       << std::endl;
         } else {
-            std::cout << "RX buffer full. Dropped frame ID 0x"
-                      << std::hex
-                      << frame.id
-                      << std::dec
+            std::cout << "RX buffer full. Dropped frame ID "
+                      << format_can_id(frame.id)
                       << std::endl;
         }
     }
@@ -196,15 +235,19 @@ void load_frames_into_buffer(const std::vector<CanFrame>& log, CircularBuffer& r
     std::cout << std::endl;
 }
 
-void process_buffered_frames(CircularBuffer& rx_buffer,
-                             CanDispatcher& dispatcher,
-                             DecoderStats& stats) {
+std::vector<FrameReport> process_buffered_frames(CircularBuffer& rx_buffer,
+                                                 CanDispatcher& dispatcher,
+                                                 DecoderStats& stats) {
     std::cout << "Processing buffered CAN frames:" << std::endl;
 
+    std::vector<FrameReport> reports;
     CanFrame frame{};
+    std::size_t frame_number = 1;
 
     while (rx_buffer.pop(frame)) {
-        process_frame(frame, dispatcher, stats);
+        FrameReport report = process_frame(frame_number, frame, dispatcher, stats);
+        reports.push_back(report);
+        frame_number++;
     }
 
     std::cout << "------------------------------" << std::endl;
@@ -212,6 +255,22 @@ void process_buffered_frames(CircularBuffer& rx_buffer,
     if (rx_buffer.is_empty()) {
         std::cout << "RX buffer is now empty." << std::endl;
     }
+
+    return reports;
+}
+
+void print_summary_report(const std::vector<FrameReport>& reports,
+                          const DecoderStats& stats) {
+    std::cout << std::endl;
+    std::cout << "Decoded Frame Report:" << std::endl;
+
+    for (const FrameReport& report : reports) {
+        print_frame_report(report);
+    }
+
+    std::cout << std::endl;
+    std::cout << "Summary:" << std::endl;
+    stats.print();
 }
 
 void run_decoder_pipeline(const std::vector<CanFrame>& can_log) {
@@ -221,13 +280,15 @@ void run_decoder_pipeline(const std::vector<CanFrame>& can_log) {
     DecoderStats stats;
 
     load_frames_into_buffer(can_log, rx_buffer);
-    process_buffered_frames(rx_buffer, dispatcher, stats);
+
+    std::vector<FrameReport> reports =
+        process_buffered_frames(rx_buffer, dispatcher, stats);
 
     std::cout << "Decoder frames seen: "
               << decoder.frames_seen()
               << std::endl;
 
-    stats.print();
+    print_summary_report(reports, stats);
 }
 
 int main() {
