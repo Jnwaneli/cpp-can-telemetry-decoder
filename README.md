@@ -52,6 +52,7 @@ Possible stuck sensor warning
 Fault summary output
 STM32 FreeRTOS CAN telemetry sender
 Waveshare USB-CAN receive workflow
+Captured hardware-generated CAN log analysis
 ```
 
 ---
@@ -95,6 +96,8 @@ cpp-can-telemetry-decoder/
 │
 ├── data/
 │   ├── sample_can_log.csv
+│   ├── good_frames.csv
+│   ├── fault_frames.csv
 │   ├── stuck_sensor_test.csv
 │   └── freertos_captured_log.csv
 │
@@ -106,20 +109,21 @@ cpp-can-telemetry-decoder/
 │   ├── can_wiring_plan.md
 │   ├── stm32_fdcan_config.md
 │   ├── can_debug_checklist.md
-│   └── usb_can_capture_notes.md
+│   ├── usb_can_capture_notes.md
+│   └── live_reading_test.md
 │
 ├── embedded/
 │   └── can_hardware_bridge/
-│       ├── stm32_can_sender/
-│       │   ├── Core/
-│       │   └── README.md
-│       │
 │       └── stm32_can_sender_freertos/
 │           ├── Core/
 │           │   ├── Inc/
 │           │   └── Src/
 │           │       └── main.c
 │           ├── docs/
+│           │   ├── freertos_architecture.md
+│           │   ├── task_table.md
+│           │   ├── queue_mutex_notes.md
+│           │   └── live_reading_test.md
 │           └── README.md
 │
 └── .gitignore
@@ -145,6 +149,12 @@ Standard CAN ID
 Classic CAN
 DLC = 8
 Little-endian 16-bit signal packing
+```
+
+Full protocol documentation is available in:
+
+```text
+docs/protocol.md
 ```
 
 ---
@@ -321,6 +331,12 @@ Stuck AIN1 warning: same AIN1 value for 20 active frames
 
 The stuck sensor check is treated as a warning, not a guaranteed fault, because a stable sensor value can be valid depending on system conditions.
 
+Full fault rule documentation is available in:
+
+```text
+docs/fault_rules.md
+```
+
 ---
 
 ## Dropped Counter Detection
@@ -378,38 +394,9 @@ average = previous_average + (new_value - previous_average) / count
 
 ---
 
-## Example Output
+## Sample Output
 
-Example decoded frame report:
-
-```text
-Decoded Frame Report:
-Frame 1: 0x100 Analog Inputs - OK
-Frame 2: 0x101 Battery and Temperature - OK
-Frame 3: 0x102 Status Flags - OK
-Frame 4: 0x100 Analog Inputs - OK
-Frame 5: 0x101 Battery and Temperature - OK
-Frame 6: 0x100 Analog Inputs - FAULT: Dropped frame counter detected for ID 0x100: expected 3, got 4
-Frame 7: 0x200 Vehicle Telemetry - OK
-Frame 8: 0x101 Battery and Temperature - OK
-Frame 9: 0x999 Unknown - FAULT: Unknown CAN ID
-Frame 10: 0x100 Analog Inputs - FAULT: Invalid DLC
-```
-
-Example signal statistics:
-
-```text
-Signal Stats:
-AIN1_RAW: min=800, max=3124, avg=1990.67, count=3
-AIN2_RAW: min=16, max=1600, avg=1005.33, count=3
-AIN3_RAW: min=2337, max=2815, avg=2528.00, count=3
-Battery_mV: min=12000, max=13000, avg=12533.33, count=3
-Temperature_deciC: min=300, max=400, avg=348.33, count=3
-Battery average: 12.53 V
-Temperature average: 34.8 C
-```
-
-Example summary:
+When running the decoder with `data/sample_can_log.csv`, the expected final summary is:
 
 ```text
 Summary:
@@ -432,6 +419,36 @@ Possible stuck sensors: 0
 Other faults: 0
 ```
 
+The three expected faults are:
+
+```text
+1 dropped counter fault
+1 unknown CAN ID fault
+1 invalid DLC fault
+```
+
+The dropped counter fault comes from a `0x100` counter sequence that skips a value.
+
+Example:
+
+```text
+Previous counter: 2
+Expected counter: 3
+Actual counter: 4
+```
+
+The decoder reports:
+
+```text
+Dropped frame counter detected for ID 0x100: expected 3, got 4
+```
+
+A full sample output explanation is available in:
+
+```text
+docs/sample_output.md
+```
+
 ---
 
 ## Build Instructions
@@ -441,51 +458,79 @@ Other faults: 0
 ```text
 C++17-compatible compiler
 PowerShell or terminal
+g++ or another compatible C++ compiler
 ```
 
-Tested with `g++` using C++17.
+This project was developed and tested using C++17.
 
-### Build
+---
 
-From the repo root:
+### Build on Windows with g++
+
+From the repository root:
 
 ```powershell
 g++ -std=c++17 -Wall -Wextra -Iinclude main.cpp src/circular_buffer.cpp src/telemetry_decoder.cpp src/bit_utils.cpp src/fault_analyzer.cpp src/decoder_stats.cpp src/can_dispatcher.cpp src/can_log_parser.cpp src/signal_stats.cpp src/counter_tracker.cpp src/stuck_sensor_tracker.cpp -o main
 ```
 
-### Run
+Run:
 
 ```powershell
 .\main.exe
 ```
 
-The program currently reads:
+---
+
+### Input File
+
+The current desktop decoder reads:
 
 ```text
 data/sample_can_log.csv
 ```
 
----
+To test another log, temporarily copy it over `data/sample_can_log.csv`.
 
-## Input Log Format
+Example:
 
-CSV format:
-
-```csv
-id,dlc,b0,b1,b2,b3,b4,b5,b6,b7
-100,8,00,08,10,00,FF,0A,07,01
-101,8,38,31,59,01,00,00,00,00
-102,8,07,00,01,00,00,00,00,00
-200,8,D2,04,AC,0D,03,2D,00,04
+```powershell
+Copy-Item data\sample_can_log.csv data\sample_can_log_backup.csv
+Copy-Item data\good_frames.csv data\sample_can_log.csv
+.\main.exe
+Copy-Item data\sample_can_log_backup.csv data\sample_can_log.csv
 ```
 
-Notes:
+---
+
+### Test Files
+
+Current test files:
 
 ```text
-CAN IDs are parsed as hexadecimal.
-DLC is parsed as decimal.
-Payload bytes are parsed as hexadecimal.
-Each row must contain 10 comma-separated fields.
+data/sample_can_log.csv
+data/good_frames.csv
+data/fault_frames.csv
+data/stuck_sensor_test.csv
+data/freertos_captured_log.csv
+```
+
+Expected purpose:
+
+```text
+sample_can_log.csv:
+    Main decoder demonstration log.
+
+good_frames.csv:
+    Valid frames with no expected faults.
+
+fault_frames.csv:
+    Intentional fault coverage.
+
+stuck_sensor_test.csv:
+    Possible stuck sensor warning test.
+
+freertos_captured_log.csv:
+    Captured STM32 FreeRTOS CAN frames from Waveshare.
 ```
 
 ---
@@ -523,11 +568,10 @@ DLC: 8 bytes
 Current hardware status:
 
 ```text
-STM32 simple CAN sender: Implemented
 STM32 FreeRTOS CAN telemetry sender: Implemented
 SN65HVD230 CAN transceiver path: Tested
 Waveshare USB-CAN receive: Tested
-Captured/logged frame analysis in C++ decoder: In Progress
+Captured/logged frame analysis in C++ decoder: Implemented
 Direct live USB-CAN reader inside C++ app: Planned
 ```
 
@@ -556,6 +600,35 @@ HAL timebase changed to TIM6
 USE_NEWLIB_REENTRANT enabled
 BSP LED control kept
 Status LED uses BSP_LED_Toggle(LED_GREEN)
+```
+
+The physical path is:
+
+```text
+NUCLEO-G431RB
+        ↓
+SN65HVD230 CAN transceiver
+        ↓
+Waveshare USB-CAN adapter
+        ↓
+PC receive software
+        ↓
+Captured CSV log
+        ↓
+C++ CAN Telemetry Decoder
+```
+
+The FreeRTOS sender uses:
+
+```text
+SignalGeneratorTask
+ProcessingTask
+CanTxTask
+StatusLedTask
+SensorSample queue
+telemetry mutex
+latestTelemetry shared structure
+100 ms CAN transmit period
 ```
 
 ---
@@ -694,23 +767,23 @@ After this fix, Waveshare received all four IDs repeatedly:
 
 ## Captured FreeRTOS Log Integration
 
-The next desktop integration step is to export captured Waveshare frames into:
+Captured Waveshare frames are stored in:
 
 ```text
 data/freertos_captured_log.csv
 ```
 
-Expected CSV format:
+Example CSV format:
 
 ```csv
 id,dlc,b0,b1,b2,b3,b4,b5,b6,b7
-100,8,00,08,10,00,FF,0A,07,01
-101,8,38,31,59,01,00,00,00,00
+100,8,7A,0D,DE,0D,42,0E,07,4B
+101,8,48,31,5F,01,00,00,00,00
 102,8,07,00,01,00,00,00,00,00
-200,8,D2,04,AC,0D,03,2D,00,04
+200,8,80,02,0A,0F,03,29,00,4B
 ```
 
-The C++ decoder should verify:
+The C++ decoder verifies:
 
 ```text
 0x100 decodes as Analog Inputs
@@ -722,7 +795,7 @@ Dropped frames should be 0 if counters are sequential
 
 ---
 
-## Implemented / In Progress / Planned
+## Implemented / Planned
 
 ### Implemented
 
@@ -745,34 +818,27 @@ StuckSensorTracker
 Dropped counter detection
 Possible stuck sensor warning
 Fault summary output
-STM32 simple CAN sender
 STM32 FreeRTOS telemetry sender
 FreeRTOS queue and mutex architecture
 CanTxTask CAN transmission
 StatusLedTask heartbeat
 Waveshare receive workflow
-```
-
-### In Progress
-
-```text
-Captured FreeRTOS log export
-data/freertos_captured_log.csv
-Desktop decoder verification using captured FreeRTOS frames
-README polish
-Final documentation cleanup
-FreeRTOS documentation files
-Public repo cleanup
+Captured FreeRTOS CSV log workflow
 ```
 
 ### Planned
 
 ```text
 Direct live USB-CAN reader in the C++ application
-SocketCAN/can0 Linux workflow
-candump-style log parser
+Linux SocketCAN support
+candump log parser
+live can0 input backend
 fault_summary.json output
 AI-assisted diagnostic report generator
+more realistic vehicle signal scaling
+more fault injection patterns
+real ADC or sensor-based telemetry on STM32
+optional FreeRTOS FaultInjectTask
 additional automated tests
 ```
 
@@ -780,13 +846,24 @@ additional automated tests
 
 ## Limitations
 
+Current limitations:
+
 ```text
-The C++ decoder currently reads CSV/captured logs, not live USB-CAN frames directly.
-The FreeRTOS telemetry values are simulated, not real sensor ADC readings yet.
-Captured log workflow is currently manual.
+The desktop C++ application reads CSV/captured logs, not live USB-CAN traffic directly.
+The STM32 FreeRTOS sender currently generates simulated telemetry, not real ADC sensor readings.
 Speed scaling for 0x200 is not implemented yet.
-Stuck sensor detection is a warning and may produce false positives.
-Direct live USB-CAN reading is planned as future work.
+0x102 system fault byte rules are not fully implemented yet.
+Testing alternate input files currently requires copying them over data/sample_can_log.csv.
+The AI diagnostic assistant is planned but not implemented yet.
+Linux SocketCAN support is planned but not implemented yet.
+```
+
+Important wording:
+
+```text
+The project currently supports live CAN transmission from STM32 and live receive through Waveshare.
+The C++ decoder currently analyzes saved captures from that live traffic.
+Direct live USB-CAN reading inside the C++ application is future work.
 ```
 
 ---
@@ -796,15 +873,142 @@ Direct live USB-CAN reading is planned as future work.
 Planned extensions:
 
 ```text
-Add direct Waveshare USB-CAN live reader
-Add Linux SocketCAN/can0 workflow
-Add candump-style parser
-Generate output/fault_summary.json
-Create AI-assisted diagnostic report generator
-Add more sample logs for good and faulty frames
-Add unit tests for parser, decoder, counters, and fault rules
-Add optional FaultInjectTask in FreeRTOS firmware
+Linux SocketCAN support
+candump log parser
+live can0 input backend
+AI-assisted diagnostic report generator
+more realistic vehicle signal scaling
+more fault injection patterns
+direct Waveshare USB-CAN reader
+fault_summary.json output
+unit tests for parser, decoder, counters, and fault rules
+real ADC or sensor-based telemetry on STM32
+optional FreeRTOS FaultInjectTask
 ```
+
+### Linux SocketCAN Support
+
+Add support for Linux SocketCAN so the decoder can eventually read from a native CAN interface such as:
+
+```text
+can0
+```
+
+Planned workflow:
+
+```text
+STM32 CAN sender
+        ↓
+CAN adapter on Linux
+        ↓
+can0
+        ↓
+C++ live SocketCAN backend
+        ↓
+CanFrame
+        ↓
+CanDispatcher
+        ↓
+TelemetryDecoder
+```
+
+---
+
+### candump Log Parser
+
+Add support for Linux `candump` logs.
+
+Example future input format:
+
+```text
+can0 100 [8] 00 08 10 00 FF 0A 07 01
+```
+
+This would make the decoder more compatible with common Linux CAN workflows.
+
+---
+
+### Live can0 Input Backend
+
+Add a live input backend that reads CAN frames directly from `can0`.
+
+This would move the project from:
+
+```text
+captured CSV decoding
+```
+
+to:
+
+```text
+direct live CAN decoding
+```
+
+---
+
+### AI-Assisted Diagnostic Report
+
+Add an AI-assisted report generator that reads deterministic decoder output and produces a human-readable diagnostic report.
+
+Important design rule:
+
+```text
+The C++ decoder remains the source of truth.
+The AI assistant explains the results but does not replace the fault logic.
+```
+
+Possible workflow:
+
+```text
+C++ decoder
+        ↓
+fault_summary.json
+        ↓
+AI-assisted report generator
+        ↓
+diagnostic_report.md
+```
+
+---
+
+### More Realistic Vehicle Signal Scaling
+
+Future versions can add realistic scaling for:
+
+```text
+speed
+rpm limits
+throttle range
+brake range
+gear range
+temperature ranges
+battery operating states
+```
+
+Example:
+
+```text
+speed_mph = speed_raw * scale_factor
+```
+
+---
+
+### More Fault Injection Patterns
+
+Additional simulated fault patterns could include:
+
+```text
+intermittent sensor invalid flags
+repeated dropped counters
+slowly rising temperature
+low battery during high load
+random corrupted DLC
+burst traffic overload
+stuck throttle
+invalid gear value
+```
+
+These patterns would improve test coverage and make the demo more realistic.
 
 ---
 

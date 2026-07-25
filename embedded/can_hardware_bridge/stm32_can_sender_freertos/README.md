@@ -54,6 +54,120 @@ Classic CAN
 Standard CAN ID
 DLC = 8
 Bitrate = 500 kbps
+Little-endian 16-bit signal packing
+```
+
+---
+
+## FreeRTOS Sender Summary
+
+The FreeRTOS sender uses four tasks:
+
+```text
+SignalGeneratorTask
+ProcessingTask
+CanTxTask
+StatusLedTask
+```
+
+It also uses:
+
+```text
+SensorSample queue
+telemetry mutex
+latestTelemetry shared structure
+100 ms CAN transmit period
+```
+
+Task pipeline:
+
+```text
+SignalGeneratorTask
+        ↓
+sensorQueueHandle
+        ↓
+ProcessingTask
+        ↓
+telemetryMutexHandle protects latestTelemetry
+        ↓
+CanTxTask
+        ↓
+STM32 FDCAN
+```
+
+### SignalGeneratorTask
+
+`SignalGeneratorTask` generates fake live telemetry values.
+
+It runs about every:
+
+```text
+10 ms
+```
+
+It sends `SensorSample` messages into:
+
+```text
+sensorQueueHandle
+```
+
+---
+
+### ProcessingTask
+
+`ProcessingTask` waits on the `SensorSample` queue.
+
+When a sample arrives, it updates:
+
+```text
+latestTelemetry
+```
+
+The update is protected by:
+
+```text
+telemetryMutexHandle
+```
+
+---
+
+### CanTxTask
+
+`CanTxTask` sends CAN frames about every:
+
+```text
+100 ms
+```
+
+It sends:
+
+```text
+0x100 = Analog Inputs
+0x101 = Battery and Temperature
+0x102 = Status Flags
+0x200 = Vehicle Telemetry
+```
+
+`CanTxTask` owns the CAN transmit counter.
+
+This prevents false dropped-frame detection in the desktop C++ decoder.
+
+---
+
+### StatusLedTask
+
+`StatusLedTask` toggles the board LED as a heartbeat.
+
+Current blink period:
+
+```text
+500 ms
+```
+
+Current LED function:
+
+```c
+BSP_LED_Toggle(LED_GREEN);
 ```
 
 ---
@@ -147,6 +261,15 @@ latestTelemetry
 The queue transfers data from `SignalGeneratorTask` to `ProcessingTask`.
 
 The mutex protects `latestTelemetry`, which is written by `ProcessingTask` and read by `CanTxTask`.
+
+Additional FreeRTOS architecture documentation is available in:
+
+```text
+docs/freertos_architecture.md
+docs/task_table.md
+docs/queue_mutex_notes.md
+docs/live_reading_test.md
+```
 
 ---
 
@@ -488,6 +611,15 @@ Captured log conversion is currently manual.
 Fault injection is not implemented in the firmware yet.
 ```
 
+Important wording:
+
+```text
+The STM32 FreeRTOS firmware generates and transmits live CAN frames.
+The Waveshare USB-CAN adapter receives those frames live.
+The C++ decoder analyzes saved CSV captures from that live traffic.
+Direct live USB-CAN reading inside the C++ app is planned future work.
+```
+
 ---
 
 ## Future Work
@@ -496,10 +628,13 @@ Fault injection is not implemented in the firmware yet.
 Add fault injection frames
 Add optional FaultInjectTask
 Add direct live USB-CAN reader on the PC side
-Add SocketCAN/can0 workflow
+Add Linux SocketCAN/can0 workflow
 Add candump-style parser
 Send real ADC or sensor values instead of simulated data
-Add more detailed firmware documentation
+Add more realistic vehicle signal scaling
+Add more fault injection patterns
+Generate fault_summary.json from the desktop decoder
+Add AI-assisted diagnostic report generation
 ```
 
 ---
