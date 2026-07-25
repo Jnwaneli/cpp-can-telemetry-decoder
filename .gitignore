@@ -1,0 +1,54 @@
+# Build outputs
+*.exe
+*.o
+*.obj
+*.out
+*.elf
+*.hex
+*.bin
+*.map
+*.list
+*.su
+*.cyclo
+*.d
+*.a
+
+# C/C++ build folders
+Debug/
+Release/
+build/
+cmake-build-*/
+
+# STM32CubeIDE generated build folders
+*/Debug/
+*/Release/
+
+# STM32CubeIDE local/project metadata that should not be public if regenerated locally
+.metadata/
+RemoteSystemsTempFiles/
+
+# Temporary files
+*.log
+*.tmp
+*.bak
+*.swp
+*.orig
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# VS Code / IDE local settings
+.vscode/
+.idea/
+
+# Executable created by desktop C++ build
+main.exe
+main
+
+# Keep project data files
+!data/*.csv
+!data/*.log
+
+# Keep documentation
+!docs/*.md
