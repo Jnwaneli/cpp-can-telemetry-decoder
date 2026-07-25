@@ -387,6 +387,114 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+static void pack_u16_le(uint8_t *data, uint8_t index, uint16_t value)
+{
+  data[index] = (uint8_t)(value & 0xFF);
+  data[index + 1] = (uint8_t)((value >> 8) & 0xFF);
+}
+
+static void can_send(uint32_t id, uint8_t *data, uint8_t dlc)
+{
+  if (dlc != 8)
+  {
+    return;
+  }
+
+  FDCAN_TxHeaderTypeDef header;
+
+  header.Identifier = id;
+  header.IdType = FDCAN_STANDARD_ID;
+  header.TxFrameType = FDCAN_DATA_FRAME;
+  header.DataLength = FDCAN_DLC_BYTES_8;
+  header.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+  header.BitRateSwitch = FDCAN_BRS_OFF;
+  header.FDFormat = FDCAN_CLASSIC_CAN;
+  header.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
+  header.MessageMarker = 0;
+
+  /*
+   * Wait briefly for a free TX FIFO slot.
+   * This prevents the 4th frame, 0x200, from being skipped
+   * when 0x100, 0x101, and 0x102 are queued first.
+   */
+  uint32_t startTick = HAL_GetTick();
+
+  while (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) == 0U)
+  {
+    if ((HAL_GetTick() - startTick) > 10U)
+    {
+      return;
+    }
+
+    osDelay(1);
+  }
+
+  if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &header, data) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+static void send_can_0x100(const ProcessedTelemetry *t)
+{
+  uint8_t data[8];
+
+  pack_u16_le(data, 0, t->ain1_raw);
+  pack_u16_le(data, 2, t->ain2_raw);
+  pack_u16_le(data, 4, t->ain3_raw);
+
+  data[6] = t->status;
+  data[7] = t->counter;
+
+  can_send(0x100, data, 8);
+}
+
+static void send_can_0x101(const ProcessedTelemetry *t)
+{
+  uint8_t data[8];
+
+  pack_u16_le(data, 0, t->battery_mV);
+  pack_u16_le(data, 2, t->temperature_deciC);
+
+  data[4] = 0x00;
+  data[5] = 0x00;
+  data[6] = 0x00;
+  data[7] = 0x00;
+
+  can_send(0x101, data, 8);
+}
+
+static void send_can_0x102(const ProcessedTelemetry *t)
+{
+  uint8_t data[8];
+
+  data[0] = t->status;
+  data[1] = 0x00;
+  data[2] = 0x01;
+  data[3] = 0x00;
+  data[4] = 0x00;
+  data[5] = 0x00;
+  data[6] = 0x00;
+  data[7] = 0x00;
+
+  can_send(0x102, data, 8);
+}
+
+static void send_can_0x200(const ProcessedTelemetry *t)
+{
+  uint8_t data[8];
+
+  pack_u16_le(data, 0, t->speed_raw);
+  pack_u16_le(data, 2, t->rpm);
+
+  data[4] = t->gear;
+  data[5] = t->throttle_percent;
+  data[6] = t->brake_percent;
+  data[7] = t->counter;
+
+  can_send(0x200, data, 8);
+}
+
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartSignalGeneratorTask */
@@ -464,7 +572,6 @@ void StartSignalGeneratorTask(void *argument)
 
   /* USER CODE END 5 */
 }
-
 /* USER CODE BEGIN Header_StartProcessingTask */
 /**
 * @brief Function implementing the ProcessingTask thread.
@@ -498,7 +605,11 @@ void StartProcessingTask(void *argument)
         latestTelemetry.gear = sample.gear;
         latestTelemetry.throttle_percent = sample.throttle_percent;
         latestTelemetry.brake_percent = sample.brake_percent;
-        latestTelemetry.counter = sample.counter;
+
+        /*
+         * Do NOT copy sample.counter here.
+         * CanTxTask owns the CAN transmit counter.
+         */
 
         latestTelemetry.timestamp_ms = sample.timestamp_ms;
         latestTelemetry.valid = 1;
@@ -521,42 +632,42 @@ void StartProcessingTask(void *argument)
 void StartCanTxTask(void *argument)
 {
   /* USER CODE BEGIN StartCanTxTask */
-	 ProcessedTelemetry localTelemetry = {0};
-	  uint8_t localTxData[8];
 
-	  for(;;)
-	  {
-	    if (osMutexAcquire(telemetryMutexHandle, osWaitForever) == osOK)
-	    {
-	      localTelemetry = latestTelemetry;
-	      osMutexRelease(telemetryMutexHandle);
-	    }
+  ProcessedTelemetry local = {0};
 
-	    if (localTelemetry.valid)
-	    {
-	      localTxData[0] = (uint8_t)(localTelemetry.ain1_raw & 0xFF);
-	      localTxData[1] = (uint8_t)((localTelemetry.ain1_raw >> 8) & 0xFF);
+  for (;;)
+  {
+    osDelay(100);
 
-	      localTxData[2] = (uint8_t)(localTelemetry.ain2_raw & 0xFF);
-	      localTxData[3] = (uint8_t)((localTelemetry.ain2_raw >> 8) & 0xFF);
+    if (osMutexAcquire(telemetryMutexHandle, osWaitForever) == osOK)
+    {
+      local = latestTelemetry;
 
-	      localTxData[4] = (uint8_t)(localTelemetry.ain3_raw & 0xFF);
-	      localTxData[5] = (uint8_t)((localTelemetry.ain3_raw >> 8) & 0xFF);
+      if (latestTelemetry.valid)
+      {
+        latestTelemetry.counter++;
+      }
 
-	      localTxData[6] = localTelemetry.status;
-	      localTxData[7] = localTelemetry.counter;
+      osMutexRelease(telemetryMutexHandle);
 
-	      if (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0)
-	      {
-	        HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader, localTxData);
-	      }
-	    }
+      if (local.valid)
+      {
+        send_can_0x100(&local);
+        osDelay(2);
 
-	    osDelay(100);
-	  }
+        send_can_0x101(&local);
+        osDelay(2);
+
+        send_can_0x102(&local);
+        osDelay(2);
+
+        send_can_0x200(&local);
+      }
+    }
+  }
+
   /* USER CODE END StartCanTxTask */
 }
-
 /* USER CODE BEGIN Header_StartStatusLedTask */
 /**
 * @brief Function implementing the StatusLedTask thread.

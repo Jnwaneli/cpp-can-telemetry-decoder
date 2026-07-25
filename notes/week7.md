@@ -944,3 +944,239 @@ latestTelemetry is protected with telemetryMutexHandle.
 ```text
 A useful diagnostic system should summarize faults by category so a technician can quickly see the main problems. In the C++ decoder, FaultAnalyzer::print_summary() groups invalid DLC, unknown IDs, voltage faults, temperature faults, dropped frames, and possible stuck sensors. In the FreeRTOS firmware, ProcessingTask blocks on a queue, receives SensorSample messages, and updates latestTelemetry while holding a mutex so CanTxTask does not read inconsistent data.
 ```
+---
+
+# Day 6 — Final Fault Summary and CanTxTask
+
+## Main goals
+
+```text
+Study Longest Common Subsequence.
+Understand basic 2D DP table structure.
+Finish full C++ fault summary output.
+Implement CanTxTask in the FreeRTOS firmware.
+Transmit CAN IDs 0x100, 0x101, 0x102, and 0x200 every 100 ms.
+Confirm Waveshare receives FreeRTOS CAN frames.
+Confirm the C++ decoder can decode captured FreeRTOS frames.
+```
+
+---
+
+## Notes questions
+
+```text
+1. What is included in my final fault summary?
+2. Which fault rules are working?
+3. What does CanTxTask do?
+4. Why does CanTxTask copy latestTelemetry locally?
+5. Why transmit every 100 ms?
+6. What CAN frames did the Waveshare receive?
+```
+
+---
+
+## Longest Common Subsequence DP idea
+
+Longest Common Subsequence uses a 2D DP table.
+
+State:
+
+```text
+dp[i][j] = length of the longest common subsequence between
+the first i characters of text1 and the first j characters of text2
+```
+
+Base case:
+
+```text
+dp[0][j] = 0
+dp[i][0] = 0
+```
+
+Transition:
+
+```text
+If text1[i - 1] == text2[j - 1]:
+    dp[i][j] = 1 + dp[i - 1][j - 1]
+
+Else:
+    dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
+```
+
+Simple explanation:
+
+```text
+If characters match, extend the diagonal answer. If not, take the best answer from skipping one character.
+```
+
+---
+
+## What is included in my final fault summary?
+
+The final C++ output includes:
+
+```text
+frames processed
+valid frames
+invalid DLC
+unknown IDs
+voltage faults
+temperature faults
+sensor invalid flags
+dropped counters
+possible stuck sensors
+min/max/average signal values
+```
+
+Simple explanation:
+
+```text
+The final summary shows both frame-level health and signal-level behavior.
+```
+
+---
+
+## Which fault rules are working?
+
+The working fault rules include:
+
+```text
+invalid DLC
+unknown CAN ID
+low battery voltage
+high battery voltage
+high temperature
+sensor invalid flag
+dropped counter
+possible stuck sensor warning
+```
+
+Simple explanation:
+
+```text
+The decoder now checks message format, known IDs, signal limits, status flags, counters, and suspicious repeated sensor values.
+```
+
+---
+
+## What does CanTxTask do?
+
+`CanTxTask` runs periodically.
+
+Every 100 ms, it:
+
+```text
+copies latestTelemetry with mutex protection
+increments the transmit counter
+sends 0x100 Analog Inputs
+sends 0x101 Battery and Temperature
+sends 0x102 Status Flags
+sends 0x200 Vehicle Telemetry
+```
+
+Simple explanation:
+
+```text
+CanTxTask turns processed telemetry into CAN frames.
+```
+
+---
+
+## Why does CanTxTask copy latestTelemetry locally?
+
+`latestTelemetry` is shared data.
+
+`ProcessingTask` writes it.
+
+`CanTxTask` reads it.
+
+`CanTxTask` copies it locally so it can release the mutex quickly before transmitting CAN frames.
+
+Simple explanation:
+
+```text
+Copy fast, release the mutex, then transmit using the local copy.
+```
+
+---
+
+## Why transmit every 100 ms?
+
+A 100 ms transmit period means the telemetry stream runs at 10 Hz.
+
+This is useful because:
+
+```text
+it is fast enough to look live
+it is slow enough to debug
+it avoids flooding the CAN bus during testing
+it matches the current project demo needs
+```
+
+Simple explanation:
+
+```text
+100 ms gives a clean live telemetry demo rate.
+```
+
+---
+
+## What CAN frames did the Waveshare receive?
+
+The expected received CAN IDs are:
+
+```text
+0x100 = Analog Inputs
+0x101 = Battery and Temperature
+0x102 = Status Flags
+0x200 = Vehicle Telemetry
+```
+
+Simple explanation:
+
+```text
+Waveshare should receive the same message IDs that the C++ decoder already understands.
+```
+
+---
+
+## Final Week 7 architecture
+
+```text
+SignalGeneratorTask
+        ↓ SensorSample queue
+ProcessingTask
+        ↓ mutex-protected latestTelemetry
+CanTxTask
+        ↓ FDCAN TX every 100 ms
+SN65HVD230
+        ↓
+Waveshare USB-CAN
+        ↓
+PC captured log
+        ↓
+C++ CAN Telemetry Decoder and Fault Analyzer
+```
+
+---
+
+## Day 6 status
+
+```text
+Full C++ fault summary complete.
+SignalStats min/max/average output complete.
+FaultAnalyzer summary output complete.
+CanTxTask implemented.
+StatusLedTask still blinks.
+FreeRTOS firmware sends live CAN frames.
+Waveshare receives CAN frames.
+C++ decoder decodes captured FreeRTOS frames.
+```
+
+---
+
+## Day 6 main interview idea
+
+```text
+Week 7 completed the transition from a basic decoder to a stronger diagnostic system. The C++ decoder now tracks signal statistics, detects invalid frames, unknown IDs, voltage and temperature faults, sensor-invalid flags, dropped counters, and possible stuck sensors. The STM32 FreeRTOS firmware generates live simulated telemetry, processes it through a queue and mutex-protected shared state, and transmits CAN frames every 100 ms through CanTxTask. Waveshare captures those frames so the PC-side C++ decoder can analyze real hardware-generated logs.
+```
