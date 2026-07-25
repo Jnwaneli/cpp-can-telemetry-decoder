@@ -116,15 +116,7 @@ const osThreadAttr_t StatusLedTask_attributes = {
   .stack_size = 128 * 4
 };
 /* USER CODE BEGIN PV */
-FDCAN_TxHeaderTypeDef txHeader;
 
-uint8_t txData[8] = {
-    0x00, 0x08,
-    0x10, 0x00,
-    0xFF, 0x0A,
-    0x07,
-    0x01
-};
 osMessageQueueId_t sensorQueueHandle;
 osMutexId_t telemetryMutexHandle;
 
@@ -180,15 +172,6 @@ int main(void)
   MX_GPIO_Init();
   MX_FDCAN1_Init();
   /* USER CODE BEGIN 2 */
-  txHeader.Identifier = 0x100;
-  txHeader.IdType = FDCAN_STANDARD_ID;
-  txHeader.TxFrameType = FDCAN_DATA_FRAME;
-  txHeader.DataLength = FDCAN_DLC_BYTES_8;
-  txHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
-  txHeader.BitRateSwitch = FDCAN_BRS_OFF;
-  txHeader.FDFormat = FDCAN_CLASSIC_CAN;
-  txHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
-  txHeader.MessageMarker = 0;
 
   if (HAL_FDCAN_Start(&hfdcan1) != HAL_OK)
   {
