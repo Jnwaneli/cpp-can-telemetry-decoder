@@ -4,9 +4,11 @@
 #include <vector>
 
 #include "can_frame.hpp"
+#include "counter_tracker.hpp"
 #include "fault_analyzer.hpp"
 #include "fault_report.hpp"
 #include "signal_stats.hpp"
+#include "stuck_sensor_tracker.hpp"
 
 class TelemetryDecoder {
 public:
@@ -25,6 +27,9 @@ public:
 
 private:
     FaultAnalyzer fault_analyzer_;
+    CounterTracker counter_tracker_;
+    StuckSensorTracker stuck_sensor_tracker_;
+
     std::size_t frames_seen_;
 
     SignalStats ain1_stats_;

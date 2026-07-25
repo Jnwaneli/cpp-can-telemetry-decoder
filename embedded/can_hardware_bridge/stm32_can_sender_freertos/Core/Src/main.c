@@ -27,6 +27,48 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+typedef struct
+{
+    uint16_t ain1_raw;
+    uint16_t ain2_raw;
+    uint16_t ain3_raw;
+
+    uint16_t battery_mV;
+    uint16_t temperature_deciC;
+
+    uint16_t speed_raw;
+    uint16_t rpm;
+
+    uint8_t status;
+    uint8_t gear;
+    uint8_t throttle_percent;
+    uint8_t brake_percent;
+    uint8_t counter;
+
+    uint32_t timestamp_ms;
+} SensorSample;
+
+typedef struct
+{
+    uint16_t ain1_raw;
+    uint16_t ain2_raw;
+    uint16_t ain3_raw;
+
+    uint16_t battery_mV;
+    uint16_t temperature_deciC;
+
+    uint16_t speed_raw;
+    uint16_t rpm;
+
+    uint8_t status;
+    uint8_t gear;
+    uint8_t throttle_percent;
+    uint8_t brake_percent;
+    uint8_t counter;
+
+    uint32_t timestamp_ms;
+    uint8_t valid;
+} ProcessedTelemetry;
 
 /* USER CODE END PTD */
 
@@ -83,7 +125,10 @@ uint8_t txData[8] = {
     0x07,
     0x01
 };
+osMessageQueueId_t sensorQueueHandle;
+osMutexId_t telemetryMutexHandle;
 
+ProcessedTelemetry latestTelemetry = {0};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -157,6 +202,7 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
+  telemetryMutexHandle = osMutexNew(NULL);
   /* USER CODE END RTOS_MUTEX */
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
@@ -169,6 +215,12 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
+  sensorQueueHandle = osMessageQueueNew(8, sizeof(SensorSample), NULL);
+
+  if (sensorQueueHandle == NULL || telemetryMutexHandle == NULL)
+  {
+      Error_Handler();
+  }
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
@@ -218,16 +270,6 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
-
-    /* USER CODE BEGIN 3 */
-      if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader, txData) != HAL_OK)
-      {
-          Error_Handler();
-      }
-
-      BSP_LED_Toggle(LED_GREEN);
-      HAL_Delay(100);
   }
   /* USER CODE END 3 */
 }
@@ -357,11 +399,69 @@ static void MX_GPIO_Init(void)
 void StartSignalGeneratorTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
-  /* Infinite loop */
-	for(;;)
-	  {
-	    osDelay(10);
-	  }
+
+  SensorSample sample;
+
+  uint16_t fake_adc = 1000;
+  uint16_t fake_speed = 550;
+  uint16_t fake_rpm = 3200;
+  uint8_t fake_throttle = 42;
+  uint8_t counter = 0;
+
+  for (;;)
+  {
+    fake_adc += 25;
+
+    if (fake_adc > 3500)
+    {
+      fake_adc = 1000;
+    }
+
+    fake_speed += 2;
+
+    if (fake_speed > 700)
+    {
+      fake_speed = 550;
+    }
+
+    fake_rpm += 25;
+
+    if (fake_rpm > 4200)
+    {
+      fake_rpm = 3200;
+    }
+
+    fake_throttle++;
+
+    if (fake_throttle > 60)
+    {
+      fake_throttle = 35;
+    }
+
+    sample.ain1_raw = fake_adc;
+    sample.ain2_raw = fake_adc + 100;
+    sample.ain3_raw = fake_adc + 200;
+
+    sample.battery_mV = 12600 + (counter % 20);
+    sample.temperature_deciC = 345 + (counter % 10);
+
+    sample.speed_raw = fake_speed;
+    sample.rpm = fake_rpm;
+
+    sample.status = 0x07;
+    sample.gear = 3;
+    sample.throttle_percent = fake_throttle;
+    sample.brake_percent = 0;
+    sample.counter = counter;
+    sample.timestamp_ms = HAL_GetTick();
+
+    osMessageQueuePut(sensorQueueHandle, &sample, 0U, 0U);
+
+    counter++;
+
+    osDelay(10);
+  }
+
   /* USER CODE END 5 */
 }
 
@@ -375,11 +475,39 @@ void StartSignalGeneratorTask(void *argument)
 void StartProcessingTask(void *argument)
 {
   /* USER CODE BEGIN StartProcessingTask */
-  /* Infinite loop */
-	for(;;)
-	  {
-	    osDelay(10);
-	  }
+
+  SensorSample sample;
+
+  for (;;)
+  {
+    if (osMessageQueueGet(sensorQueueHandle, &sample, NULL, osWaitForever) == osOK)
+    {
+      if (osMutexAcquire(telemetryMutexHandle, osWaitForever) == osOK)
+      {
+        latestTelemetry.ain1_raw = sample.ain1_raw;
+        latestTelemetry.ain2_raw = sample.ain2_raw;
+        latestTelemetry.ain3_raw = sample.ain3_raw;
+
+        latestTelemetry.battery_mV = sample.battery_mV;
+        latestTelemetry.temperature_deciC = sample.temperature_deciC;
+
+        latestTelemetry.speed_raw = sample.speed_raw;
+        latestTelemetry.rpm = sample.rpm;
+
+        latestTelemetry.status = sample.status;
+        latestTelemetry.gear = sample.gear;
+        latestTelemetry.throttle_percent = sample.throttle_percent;
+        latestTelemetry.brake_percent = sample.brake_percent;
+        latestTelemetry.counter = sample.counter;
+
+        latestTelemetry.timestamp_ms = sample.timestamp_ms;
+        latestTelemetry.valid = 1;
+
+        osMutexRelease(telemetryMutexHandle);
+      }
+    }
+  }
+
   /* USER CODE END StartProcessingTask */
 }
 
@@ -393,11 +521,38 @@ void StartProcessingTask(void *argument)
 void StartCanTxTask(void *argument)
 {
   /* USER CODE BEGIN StartCanTxTask */
-  /* Infinite loop */
-	for(;;)
+	 ProcessedTelemetry localTelemetry = {0};
+	  uint8_t localTxData[8];
+
+	  for(;;)
 	  {
-	    HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader, txData);
-	    osDelay(1000);
+	    if (osMutexAcquire(telemetryMutexHandle, osWaitForever) == osOK)
+	    {
+	      localTelemetry = latestTelemetry;
+	      osMutexRelease(telemetryMutexHandle);
+	    }
+
+	    if (localTelemetry.valid)
+	    {
+	      localTxData[0] = (uint8_t)(localTelemetry.ain1_raw & 0xFF);
+	      localTxData[1] = (uint8_t)((localTelemetry.ain1_raw >> 8) & 0xFF);
+
+	      localTxData[2] = (uint8_t)(localTelemetry.ain2_raw & 0xFF);
+	      localTxData[3] = (uint8_t)((localTelemetry.ain2_raw >> 8) & 0xFF);
+
+	      localTxData[4] = (uint8_t)(localTelemetry.ain3_raw & 0xFF);
+	      localTxData[5] = (uint8_t)((localTelemetry.ain3_raw >> 8) & 0xFF);
+
+	      localTxData[6] = localTelemetry.status;
+	      localTxData[7] = localTelemetry.counter;
+
+	      if (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0)
+	      {
+	        HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader, localTxData);
+	      }
+	    }
+
+	    osDelay(100);
 	  }
   /* USER CODE END StartCanTxTask */
 }
@@ -412,7 +567,6 @@ void StartCanTxTask(void *argument)
 void StartStatusLedTask(void *argument)
 {
   /* USER CODE BEGIN StartStatusLedTask */
-  /* Infinite loop */
 	 for(;;)
 	  {
 	    BSP_LED_Toggle(LED_GREEN);

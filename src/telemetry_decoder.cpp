@@ -39,6 +39,8 @@ void print_stats_line(const std::string& label, const SignalStats& stats) {
 
 TelemetryDecoder::TelemetryDecoder()
     : fault_analyzer_(),
+      counter_tracker_(),
+      stuck_sensor_tracker_(),
       frames_seen_(0),
       ain1_stats_(),
       ain2_stats_(),
@@ -165,7 +167,24 @@ std::vector<FaultReport> TelemetryDecoder::decode_0x100(const CanFrame& frame) {
               << static_cast<int>(data.counter)
               << std::endl;
 
-    return fault_analyzer_.check_analog_faults(data);
+    bool system_active = data.sensor1_valid &&
+                         data.sensor2_valid &&
+                         data.sensor3_valid &&
+                         !data.error_flag_set;
+
+    std::vector<FaultReport> reports =
+        fault_analyzer_.check_analog_faults(data);
+
+    std::vector<FaultReport> counter_reports =
+        counter_tracker_.check_counter(frame.id, data.counter);
+
+    std::vector<FaultReport> stuck_sensor_reports =
+        stuck_sensor_tracker_.check_ain1(data.ain1_raw, system_active);
+
+    reports.insert(reports.end(), counter_reports.begin(), counter_reports.end());
+    reports.insert(reports.end(), stuck_sensor_reports.begin(), stuck_sensor_reports.end());
+
+    return reports;
 }
 
 std::vector<FaultReport> TelemetryDecoder::decode_0x101(const CanFrame& frame) {
@@ -310,5 +329,5 @@ std::vector<FaultReport> TelemetryDecoder::decode_0x200(const CanFrame& frame) {
 
     std::cout << "Speed scaling: not implemented yet" << std::endl;
 
-    return {};
+    return counter_tracker_.check_counter(frame.id, data.counter);
 }

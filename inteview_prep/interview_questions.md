@@ -9710,3 +9710,328 @@ My answer:
 Reference answer:
 
 Clone Graph needs a map because graphs can contain cycles and shared neighbors. The map prevents duplicate clones and infinite recursion. In the CAN decoder project, `FaultReport` stores fault information as data, allowing the program to collect, count, print, save, or test faults instead of only printing immediately inside `FaultAnalyzer`.
+---
+
+# Week 7 Day 3 — Dropped Counter Detection and Queue Setup
+
+## Interview questions
+
+```text
+1. Why do telemetry protocols use counters?
+2. How do you detect dropped CAN frames with an 8-bit counter?
+3. How do you handle wrap-around from 255 to 0?
+4. Why does House Robber require DP instead of simple greedy?
+5. What is a queue in FreeRTOS?
+6. Why use a queue between SignalGeneratorTask and ProcessingTask?
+7. Why use a queue instead of a global variable?
+8. What is a mutex?
+9. Why protect latestTelemetry with a mutex?
+10. Which tasks read and write latestTelemetry?
+```
+
+---
+
+## Why do telemetry protocols use counters?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Counters help verify that messages are arriving in order and updating correctly.
+
+They can reveal:
+
+```text
+dropped frames
+repeated frames
+stale frames
+communication gaps
+```
+
+Simple version:
+
+```text
+Counters prove the message stream is alive and in sequence.
+```
+
+---
+
+## How do you detect dropped CAN frames with an 8-bit counter?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+The decoder stores the previous counter for a CAN ID.
+
+It calculates:
+
+```text
+expected_counter = previous_counter + 1
+```
+
+If the actual counter does not equal the expected counter, the decoder reports a dropped frame.
+
+Simple version:
+
+```text
+If the counter skips, a frame may have been dropped.
+```
+
+---
+
+## How do you handle wrap-around from 255 to 0?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+An 8-bit counter can store values from `0` to `255`.
+
+After `255`, the next valid value is `0`.
+
+So this is valid:
+
+```text
+previous = 255
+current = 0
+```
+
+Simple version:
+
+```text
+255 to 0 is normal 8-bit wrap-around.
+```
+
+---
+
+## Why does House Robber require DP instead of simple greedy?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+House Robber requires DP because choosing the best-looking house now can block better future choices.
+
+At each house, the algorithm compares:
+
+```text
+skip current house
+rob current house + best result from two houses back
+```
+
+Simple version:
+
+```text
+The best local choice is not always the best total choice.
+```
+
+---
+
+## What is a queue in FreeRTOS?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A queue is a FreeRTOS communication object that lets one task send data to another task safely.
+
+Simple version:
+
+```text
+A queue moves messages between tasks.
+```
+
+---
+
+## Why use a queue between SignalGeneratorTask and ProcessingTask?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`SignalGeneratorTask` produces sensor samples.
+
+`ProcessingTask` consumes sensor samples.
+
+The queue safely transfers `SensorSample` messages between them in order.
+
+Simple version:
+
+```text
+The queue connects the producer task to the consumer task.
+```
+
+---
+
+## Why use a queue instead of a global variable?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A global variable can be overwritten before another task reads it.
+
+A queue stores messages and lets the receiving task block until data is available.
+
+Simple version:
+
+```text
+A queue prevents unsafe data handoff between tasks.
+```
+
+---
+
+## What is a mutex?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+A mutex is a lock used to protect shared data.
+
+Only one task can hold the mutex at a time.
+
+Simple version:
+
+```text
+A mutex prevents two tasks from accessing shared data at the same time.
+```
+
+---
+
+## Why protect latestTelemetry with a mutex?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`latestTelemetry` is shared between tasks.
+
+`ProcessingTask` writes it.
+
+`CanTxTask` reads it.
+
+A mutex prevents simultaneous read/write access.
+
+Simple version:
+
+```text
+The mutex protects shared telemetry data from race conditions.
+```
+
+---
+
+## Which tasks read and write latestTelemetry?
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+`ProcessingTask` writes `latestTelemetry`.
+
+`CanTxTask` reads `latestTelemetry`.
+
+Simple version:
+
+```text
+ProcessingTask writes; CanTxTask reads.
+```
+
+---
+
+## Week 7 Day 3 Core Interview Summary
+
+My answer:
+
+
+
+
+
+
+
+
+
+Reference answer:
+
+Telemetry counters help detect dropped or stale messages by checking whether each received counter follows the previous value. The decoder handles normal 8-bit wrap-around from `255` to `0`. On the FreeRTOS side, a queue safely transfers `SensorSample` messages from `SignalGeneratorTask` to `ProcessingTask`, while a mutex protects `latestTelemetry` because `ProcessingTask` writes it and `CanTxTask` reads it.

@@ -494,3 +494,453 @@ Build and LED status recorded honestly.
 ```text
 Min Cost Climbing Stairs uses dynamic programming with a state, transition, and base case. In the decoder, SignalStats computes running min, max, average, and count for telemetry signals without storing every sample. In the firmware, FreeRTOS tasks split the program into scheduled units of work, and the StatusLedTask heartbeat helps confirm that the scheduler is running.
 ```
+---
+
+# Day 3 — Dropped Counter Detection and Queue Setup
+
+## Main goals
+
+```text
+Study why greedy does not always work.
+Solve House Robber.
+Add dropped counter detection to the C++ decoder.
+Handle 8-bit counter wrap-around from 255 to 0.
+Define SensorSample and ProcessedTelemetry in the FreeRTOS firmware.
+Create sensorQueueHandle.
+Create telemetryMutexHandle.
+Create latestTelemetry shared state.
+Start the FreeRTOS queue/mutex architecture.
+```
+
+---
+
+## Notes questions
+
+```text
+1. Why do telemetry protocols use counters?
+2. How does dropped counter detection work?
+3. How does counter wrap-around work?
+4. What is a queue?
+5. Why use a queue instead of a global variable?
+6. What is a mutex?
+7. What shared data needs protection?
+```
+
+---
+
+## Why greedy does not always work
+
+Greedy means making the best-looking choice right now.
+
+Greedy does not always work because a good immediate choice can block a better future choice.
+
+House Robber is an example because robbing one house prevents robbing its neighbors.
+
+Simple explanation:
+
+```text
+Sometimes the best local choice is not the best total choice.
+```
+
+---
+
+## House Robber DP idea
+
+For House Robber:
+
+```text
+state:
+dp[i] = maximum money from houses 0 through i
+
+transition:
+dp[i] = max(dp[i - 1], nums[i] + dp[i - 2])
+
+base case:
+dp[0] = nums[0]
+dp[1] = max(nums[0], nums[1])
+```
+
+Simple explanation:
+
+```text
+At each house, choose between skipping it or robbing it.
+```
+
+---
+
+## Why do telemetry protocols use counters?
+
+Telemetry protocols use counters to show whether messages are arriving in order.
+
+Counters can help detect:
+
+```text
+dropped frames
+repeated frames
+stale data
+communication gaps
+```
+
+Simple explanation:
+
+```text
+A counter helps prove that the message stream is updating correctly.
+```
+
+---
+
+## How does dropped counter detection work?
+
+The decoder remembers the previous counter value for each CAN ID.
+
+Then it computes:
+
+```text
+expected_counter = previous_counter + 1
+```
+
+If the actual counter does not match the expected counter, the decoder reports a dropped counter fault.
+
+Example:
+
+```text
+Previous counter: 5
+Expected counter: 6
+Actual counter: 8
+Result: dropped counter fault
+```
+
+Simple explanation:
+
+```text
+If the counter skips, the decoder assumes one or more frames may have been missed.
+```
+
+---
+
+## How does counter wrap-around work?
+
+The counter is 8-bit.
+
+So it can store:
+
+```text
+0 through 255
+```
+
+After `255`, the next valid value is `0`.
+
+Example:
+
+```text
+Previous counter: 255
+Expected counter: 0
+Actual counter: 0
+Result: OK
+```
+
+Simple explanation:
+
+```text
+255 to 0 is normal for an 8-bit counter.
+```
+
+---
+
+## What is a queue?
+
+A queue is an RTOS communication object that lets one task send data to another task.
+
+In this firmware:
+
+```text
+SignalGeneratorTask sends SensorSample
+ProcessingTask receives SensorSample
+```
+
+Simple explanation:
+
+```text
+A queue safely moves data from one task to another.
+```
+
+---
+
+## Why use a queue instead of a global variable?
+
+A queue is safer than a plain global variable because it stores messages in order and lets the receiving task block until data arrives.
+
+A global variable can be overwritten before another task reads it.
+
+Simple explanation:
+
+```text
+A queue prevents missed handoffs between producer and consumer tasks.
+```
+
+---
+
+## What is a mutex?
+
+A mutex is a lock used to protect shared data.
+
+Only one task can hold the mutex at a time.
+
+Simple explanation:
+
+```text
+A mutex prevents two tasks from touching shared data at the same time.
+```
+
+---
+
+## What shared data needs protection?
+
+The shared data is:
+
+```text
+latestTelemetry
+```
+
+It is shared because:
+
+```text
+ProcessingTask writes latestTelemetry
+CanTxTask reads latestTelemetry
+```
+
+So it must be protected with:
+
+```text
+telemetryMutexHandle
+```
+
+Simple explanation:
+
+```text
+latestTelemetry needs a mutex because one task writes it and another task reads it.
+```
+
+---
+
+## FreeRTOS Day 3 architecture
+
+```text
+SignalGeneratorTask
+        ↓ SensorSample
+sensorQueueHandle
+        ↓
+ProcessingTask
+        ↓ mutex-protected write
+latestTelemetry
+        ↓ mutex-protected read
+CanTxTask
+```
+
+---
+
+## Day 3 status
+
+```text
+Dropped counter detection added.
+Wrap-around from 255 to 0 handled.
+SensorSample struct created.
+ProcessedTelemetry struct created.
+sensorQueueHandle created.
+telemetryMutexHandle created.
+latestTelemetry shared state created.
+FreeRTOS queue/mutex architecture started.
+```
+
+---
+
+## Day 3 main interview idea
+
+```text
+Telemetry counters help detect dropped or stale messages by checking whether each received counter follows the previous value. The decoder handles normal 8-bit wrap-around from 255 to 0. On the FreeRTOS side, a queue safely transfers SensorSample messages from SignalGeneratorTask to ProcessingTask, while a mutex protects latestTelemetry because ProcessingTask writes it and CanTxTask reads it.
+```
+---
+
+# Day 5 — Fault Summary and ProcessingTask
+
+## Main goals
+
+```text
+Study Longest Increasing Subsequence.
+Understand the DP pattern without needing full mastery yet.
+Create FaultAnalyzer::print_summary().
+Group faults by category.
+Implement ProcessingTask.
+ProcessingTask blocks on sensorQueueHandle.
+ProcessingTask receives SensorSample.
+ProcessingTask updates latestTelemetry with mutex protection.
+```
+
+---
+
+## Notes questions
+
+```text
+1. What makes a good fault summary?
+2. How would a technician use this output?
+3. What does blocking on a queue mean?
+4. Why does ProcessingTask use a mutex?
+5. What could happen without a mutex?
+```
+
+---
+
+## Longest Increasing Subsequence DP idea
+
+For LIS:
+
+```text
+state:
+dp[i] = length of the longest increasing subsequence ending at index i
+
+base case:
+dp[i] starts at 1
+
+transition:
+if nums[j] < nums[i]:
+    dp[i] = max(dp[i], dp[j] + 1)
+```
+
+Simple explanation:
+
+```text
+For each number, look backward and see if it can extend a previous increasing subsequence.
+```
+
+---
+
+## What makes a good fault summary?
+
+A good fault summary groups problems by category.
+
+Instead of only showing individual frame messages, it shows totals like:
+
+```text
+Invalid DLC
+Unknown IDs
+Voltage faults
+Temperature faults
+Dropped frames
+Possible stuck sensors
+```
+
+Simple explanation:
+
+```text
+A good fault summary tells the user what kinds of problems happened and how often.
+```
+
+---
+
+## How would a technician use this output?
+
+A technician could use the summary to decide where to debug first.
+
+Examples:
+
+```text
+Many invalid DLC faults -> check frame formatting or transmitter payload size.
+Many unknown IDs -> check CAN ID map or unexpected device traffic.
+Many voltage faults -> check battery signal, scaling, or power system.
+Many temperature faults -> check temperature sensor, scaling, or thermal issue.
+Many dropped frames -> check bus load, timing, or receiver reliability.
+Possible stuck sensors -> check sensor wiring, ADC input, or constant test data.
+```
+
+Simple explanation:
+
+```text
+The summary points the technician toward the most likely debug area.
+```
+
+---
+
+## What does blocking on a queue mean?
+
+Blocking on a queue means a task waits until data is available.
+
+In this project:
+
+```text
+ProcessingTask waits on sensorQueueHandle.
+When SignalGeneratorTask sends SensorSample, ProcessingTask wakes up.
+```
+
+Simple explanation:
+
+```text
+The task sleeps until there is work to do.
+```
+
+---
+
+## Why does ProcessingTask use a mutex?
+
+`ProcessingTask` writes to:
+
+```text
+latestTelemetry
+```
+
+`CanTxTask` reads from:
+
+```text
+latestTelemetry
+```
+
+Since the data is shared, a mutex protects it.
+
+Simple explanation:
+
+```text
+The mutex prevents simultaneous read/write access to shared telemetry.
+```
+
+---
+
+## What could happen without a mutex?
+
+Without a mutex, `CanTxTask` could read while `ProcessingTask` is halfway through updating the struct.
+
+This could create mixed data.
+
+Example:
+
+```text
+AIN1 from new sample
+battery from old sample
+counter from new sample
+rpm from old sample
+```
+
+Simple explanation:
+
+```text
+Without a mutex, shared data can become inconsistent.
+```
+
+---
+
+## Day 5 status
+
+```text
+Fault summary added.
+Fault categories added.
+FaultAnalyzer::print_summary() implemented.
+ProcessingTask receives SensorSample from sensorQueueHandle.
+ProcessingTask updates latestTelemetry.
+latestTelemetry is protected with telemetryMutexHandle.
+```
+
+---
+
+## Day 5 main interview idea
+
+```text
+A useful diagnostic system should summarize faults by category so a technician can quickly see the main problems. In the C++ decoder, FaultAnalyzer::print_summary() groups invalid DLC, unknown IDs, voltage faults, temperature faults, dropped frames, and possible stuck sensors. In the FreeRTOS firmware, ProcessingTask blocks on a queue, receives SensorSample messages, and updates latestTelemetry while holding a mutex so CanTxTask does not read inconsistent data.
+```

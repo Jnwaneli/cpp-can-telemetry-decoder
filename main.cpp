@@ -12,6 +12,7 @@
 #include "can_validation.hpp"
 #include "circular_buffer.hpp"
 #include "decoder_stats.hpp"
+#include "fault_analyzer.hpp"
 #include "fault_report.hpp"
 #include "frame_report.hpp"
 #include "parser_state.hpp"
@@ -30,7 +31,7 @@ std::vector<CanFrame> create_fallback_can_log() {
         {0x102, 8, {0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00}},
         {0x100, 8, {0x20, 0x03, 0x40, 0x06, 0x80, 0x09, 0x07, 0x02}},
         {0x101, 8, {0xE0, 0x2E, 0x90, 0x01, 0x00, 0x00, 0x00, 0x00}},
-        {0x100, 8, {0x34, 0x0C, 0x78, 0x05, 0x21, 0x09, 0x07, 0x03}},
+        {0x100, 8, {0x34, 0x0C, 0x78, 0x05, 0x21, 0x09, 0x07, 0x04}},
         {0x200, 8, {0xD2, 0x04, 0xAC, 0x0D, 0x03, 0x2D, 0x00, 0x04}},
         {0x101, 8, {0xC8, 0x32, 0x2C, 0x01, 0x00, 0x00, 0x00, 0x00}},
         {0x999, 8, {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}},
@@ -70,7 +71,7 @@ std::size_t count_faults(const std::vector<FaultReport>& reports) {
     std::size_t count = 0;
 
     for (const FaultReport& report : reports) {
-        if (report.has_fault) {
+        if (report.has_fault && report.severity == FaultSeverity::Fault) {
             count++;
         }
     }
@@ -78,10 +79,31 @@ std::size_t count_faults(const std::vector<FaultReport>& reports) {
     return count;
 }
 
-void add_fault_messages(const std::vector<FaultReport>& reports,
-                        FrameReport& frame_report) {
+std::size_t count_warnings(const std::vector<FaultReport>& reports) {
+    std::size_t count = 0;
+
     for (const FaultReport& report : reports) {
-        if (report.has_fault) {
+        if (report.severity == FaultSeverity::Warning) {
+            count++;
+        }
+    }
+
+    return count;
+}
+
+void record_reports_in_summary(const std::vector<FaultReport>& reports,
+                               FaultAnalyzer& fault_summary_tracker) {
+    for (const FaultReport& report : reports) {
+        fault_summary_tracker.record_report(report);
+    }
+}
+
+void add_report_messages(const std::vector<FaultReport>& reports,
+                         FrameReport& frame_report) {
+    for (const FaultReport& report : reports) {
+        if (report.severity == FaultSeverity::Warning) {
+            frame_report.warning_messages.push_back(report.message);
+        } else if (report.has_fault) {
             frame_report.fault_messages.push_back(report.message);
             frame_report.ok = false;
         }
@@ -131,19 +153,30 @@ void print_frame_report(const FrameReport& report) {
               << " - ";
 
     if (report.ok) {
-        std::cout << "OK" << std::endl;
-        return;
+        std::cout << "OK";
+    } else {
+        std::cout << "FAULT";
+
+        if (!report.fault_messages.empty()) {
+            std::cout << ": ";
+
+            for (std::size_t i = 0; i < report.fault_messages.size(); i++) {
+                std::cout << report.fault_messages[i];
+
+                if (i + 1 < report.fault_messages.size()) {
+                    std::cout << "; ";
+                }
+            }
+        }
     }
 
-    std::cout << "FAULT";
+    if (!report.warning_messages.empty()) {
+        std::cout << "; WARNING: ";
 
-    if (!report.fault_messages.empty()) {
-        std::cout << ": ";
+        for (std::size_t i = 0; i < report.warning_messages.size(); i++) {
+            std::cout << report.warning_messages[i];
 
-        for (std::size_t i = 0; i < report.fault_messages.size(); i++) {
-            std::cout << report.fault_messages[i];
-
-            if (i + 1 < report.fault_messages.size()) {
+            if (i + 1 < report.warning_messages.size()) {
                 std::cout << "; ";
             }
         }
@@ -155,12 +188,14 @@ void print_frame_report(const FrameReport& report) {
 FrameReport process_frame(std::size_t frame_number,
                           const CanFrame& frame,
                           CanDispatcher& dispatcher,
-                          DecoderStats& stats) {
+                          DecoderStats& stats,
+                          FaultAnalyzer& fault_summary_tracker) {
     FrameReport report{
         frame_number,
         frame.id,
         frame_type_name(frame.id),
         true,
+        {},
         {}
     };
 
@@ -172,25 +207,41 @@ FrameReport process_frame(std::size_t frame_number,
 
     print_frame_header(frame);
 
+    std::vector<FaultReport> validation_reports;
+
     print_parser_state(ParserState::VALIDATE_ID);
 
     if (!is_known_id(frame.id)) {
-        report.ok = false;
-        report.fault_messages.push_back("Unknown CAN ID");
+        validation_reports.push_back({
+            true,
+            "Unknown CAN ID",
+            FaultSeverity::Fault,
+            FaultCategory::UnknownId
+        });
+
         stats.record_unknown_id();
     }
 
     print_parser_state(ParserState::VALIDATE_DLC);
 
     if (!has_valid_dlc(frame)) {
-        report.ok = false;
-        report.fault_messages.push_back("Invalid DLC");
+        validation_reports.push_back({
+            true,
+            "Invalid DLC",
+            FaultSeverity::Fault,
+            FaultCategory::InvalidDlc
+        });
+
         stats.record_invalid_dlc();
     }
 
-    if (!report.ok) {
+    if (!validation_reports.empty()) {
+        add_report_messages(validation_reports, report);
+        record_reports_in_summary(validation_reports, fault_summary_tracker);
+
         print_parser_state(ParserState::PRINT_RESULT);
         print_frame_report(report);
+
         return report;
     }
 
@@ -203,9 +254,13 @@ FrameReport process_frame(std::size_t frame_number,
     print_parser_state(ParserState::ANALYZE_FAULTS);
 
     std::size_t decoded_fault_count = count_faults(decoded_reports);
-    stats.add_faults(decoded_fault_count);
+    std::size_t decoded_warning_count = count_warnings(decoded_reports);
 
-    add_fault_messages(decoded_reports, report);
+    stats.add_faults(decoded_fault_count);
+    stats.add_warnings(decoded_warning_count);
+
+    add_report_messages(decoded_reports, report);
+    record_reports_in_summary(decoded_reports, fault_summary_tracker);
 
     print_parser_state(ParserState::PRINT_RESULT);
     print_frame_report(report);
@@ -237,7 +292,8 @@ void load_frames_into_buffer(const std::vector<CanFrame>& log, CircularBuffer& r
 
 std::vector<FrameReport> process_buffered_frames(CircularBuffer& rx_buffer,
                                                  CanDispatcher& dispatcher,
-                                                 DecoderStats& stats) {
+                                                 DecoderStats& stats,
+                                                 FaultAnalyzer& fault_summary_tracker) {
     std::cout << "Processing buffered CAN frames:" << std::endl;
 
     std::vector<FrameReport> reports;
@@ -245,7 +301,9 @@ std::vector<FrameReport> process_buffered_frames(CircularBuffer& rx_buffer,
     std::size_t frame_number = 1;
 
     while (rx_buffer.pop(frame)) {
-        FrameReport report = process_frame(frame_number, frame, dispatcher, stats);
+        FrameReport report =
+            process_frame(frame_number, frame, dispatcher, stats, fault_summary_tracker);
+
         reports.push_back(report);
         frame_number++;
     }
@@ -260,7 +318,8 @@ std::vector<FrameReport> process_buffered_frames(CircularBuffer& rx_buffer,
 }
 
 void print_summary_report(const std::vector<FrameReport>& reports,
-                          const DecoderStats& stats) {
+                          const DecoderStats& stats,
+                          const FaultAnalyzer& fault_summary_tracker) {
     std::cout << std::endl;
     std::cout << "Decoded Frame Report:" << std::endl;
 
@@ -271,6 +330,9 @@ void print_summary_report(const std::vector<FrameReport>& reports,
     std::cout << std::endl;
     std::cout << "Summary:" << std::endl;
     stats.print();
+
+    std::cout << std::endl;
+    fault_summary_tracker.print_summary();
 }
 
 void run_decoder_pipeline(const std::vector<CanFrame>& can_log) {
@@ -278,11 +340,12 @@ void run_decoder_pipeline(const std::vector<CanFrame>& can_log) {
     TelemetryDecoder decoder;
     CanDispatcher dispatcher(decoder);
     DecoderStats stats;
+    FaultAnalyzer fault_summary_tracker;
 
     load_frames_into_buffer(can_log, rx_buffer);
 
     std::vector<FrameReport> reports =
-        process_buffered_frames(rx_buffer, dispatcher, stats);
+        process_buffered_frames(rx_buffer, dispatcher, stats, fault_summary_tracker);
 
     std::cout << "Decoder frames seen: "
               << decoder.frames_seen()
@@ -290,7 +353,7 @@ void run_decoder_pipeline(const std::vector<CanFrame>& can_log) {
 
     decoder.print_signal_stats();
 
-    print_summary_report(reports, stats);
+    print_summary_report(reports, stats, fault_summary_tracker);
 }
 
 int main() {

@@ -11,4 +11,5 @@ struct FrameReport {
     std::string frame_name;
     bool ok;
     std::vector<std::string> fault_messages;
+    std::vector<std::string> warning_messages;
 };
