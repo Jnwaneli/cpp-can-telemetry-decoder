@@ -59,10 +59,6 @@ Because the STM32 firmware transmits four CAN frame types per transmit cycle, th
 2000 total frames / 4 frame types = 500 telemetry cycles
 ```
 
-Terminal summary screenshot:
-
-![Live decoder summary](media/live_decoder_summary.png)
-
 Short demo videos were captured for:
 
 ```text
@@ -228,9 +224,6 @@ cpp-can-telemetry-decoder/
 │   ├── real_time_cpp_ingestion.md
 │   ├── software_data_flow.md
 │   └── live_waveshare_test_day4.md
-│
-├── media/
-│   └── live_decoder_summary.png
 │
 ├── embedded/
 │   └── can_hardware_bridge/
