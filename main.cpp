@@ -14,11 +14,16 @@
 #include "decoder_stats.hpp"
 #include "fault_analyzer.hpp"
 #include "fault_report.hpp"
+#include "fault_summary_writer.hpp"
 #include "frame_report.hpp"
 #include "frame_source.hpp"
 #include "parser_state.hpp"
 #include "telemetry_decoder.hpp"
 #include "waveshare_serial_frame_source.hpp"
+
+namespace {
+const std::string FAULT_SUMMARY_OUTPUT_PATH = "output/fault_summary.json";
+}
 
 void print_parser_state(ParserState state) {
     std::cout << "Parser State: "
@@ -369,7 +374,17 @@ void print_summary_report(const std::vector<FrameReport>& reports,
     fault_summary_tracker.print_summary();
 }
 
-void run_decoder_pipeline(const std::vector<CanFrame>& can_log) {
+void write_summary_output(const std::string& source_name,
+                          const DecoderStats& stats,
+                          const FaultAnalyzer& fault_summary_tracker) {
+    write_fault_summary_json(FAULT_SUMMARY_OUTPUT_PATH,
+                             source_name,
+                             stats,
+                             fault_summary_tracker);
+}
+
+void run_decoder_pipeline(const std::vector<CanFrame>& can_log,
+                          const std::string& source_name) {
     CircularBuffer rx_buffer;
     TelemetryDecoder decoder;
     CanDispatcher dispatcher(decoder);
@@ -388,9 +403,12 @@ void run_decoder_pipeline(const std::vector<CanFrame>& can_log) {
     decoder.print_signal_stats();
 
     print_summary_report(reports, stats, fault_summary_tracker);
+    write_summary_output(source_name, stats, fault_summary_tracker);
 }
 
-void run_decoder_live(FrameSource& source, std::size_t max_frames = 0) {
+void run_decoder_live(FrameSource& source,
+                      const std::string& source_name,
+                      std::size_t max_frames = 0) {
     TelemetryDecoder decoder;
     CanDispatcher dispatcher(decoder);
     DecoderStats stats;
@@ -406,6 +424,7 @@ void run_decoder_live(FrameSource& source, std::size_t max_frames = 0) {
     decoder.print_signal_stats();
 
     print_summary_report(reports, stats, fault_summary_tracker);
+    write_summary_output(source_name, stats, fault_summary_tracker);
 }
 
 void print_usage(const std::string& program_name) {
@@ -418,6 +437,10 @@ void print_usage(const std::string& program_name) {
     std::cout << "Examples:" << std::endl;
     std::cout << "  " << program_name << " --csv data/sample_can_log.csv" << std::endl;
     std::cout << "  " << program_name << " --waveshare-serial COM4 100" << std::endl;
+    std::cout << std::endl;
+    std::cout << "Each successful run writes "
+              << FAULT_SUMMARY_OUTPUT_PATH
+              << std::endl;
 }
 
 int main(int argc, char* argv[]) {
@@ -430,12 +453,12 @@ int main(int argc, char* argv[]) {
                       << std::endl;
 
             std::vector<CanFrame> fallback_log = create_fallback_can_log();
-            run_decoder_pipeline(fallback_log);
+            run_decoder_pipeline(fallback_log, "fallback_log");
 
             return 0;
         }
 
-        run_decoder_live(source);
+        run_decoder_live(source, "csv_default");
         return 0;
     }
 
@@ -460,7 +483,7 @@ int main(int argc, char* argv[]) {
             return 1;
         }
 
-        run_decoder_live(source);
+        run_decoder_live(source, "csv_log");
         return 0;
     }
 
@@ -485,7 +508,7 @@ int main(int argc, char* argv[]) {
             return 1;
         }
 
-        run_decoder_live(source, max_frames);
+        run_decoder_live(source, "waveshare_live", max_frames);
         return 0;
     }
 
