@@ -105,7 +105,15 @@ The Waveshare USB-CAN software confirmed live CAN traffic from the STM32 FreeRTO
 
 <img src="./media/waveshare_receive.png?cache=receive-final" alt="Waveshare USB-CAN software receiving live CAN frames" width="900">
 
-**Figure 3. Waveshare USB-CAN receive software.** The receive window confirms that the STM32 FreeRTOS sender is transmitting live CAN frames through the SN65HVD230 transceiver into the Waveshare USB-CAN adapter.
+**Figure 3. Waveshare USB-CAN receive software.** The receive window confirms that the STM32 FreeRTOS sender is transmitting live CAN frames through the SN65HVD230 transceiver into the Waveshare USB-CAN adapter.\
+
+### Physical Hardware Test Setup
+
+The physical hardware setup shows the NUCLEO-G431RB connected to the SN65HVD230 CAN transceiver on a breadboard, with CANH/CANL connected to the Waveshare USB-CAN adapter.
+
+<img src="./media/physical_hardware_setup.jpg" alt="Physical STM32 FreeRTOS CAN hardware test setup" width="700">
+
+**Figure 4. Physical STM32 FreeRTOS CAN hardware test setup.** The NUCLEO-G431RB is wired to the SN65HVD230 CAN transceiver on a breadboard. The transceiver connects over CANH/CANL to the Waveshare USB-CAN adapter for PC-side live CAN receive testing.
 
 ---
 
@@ -190,7 +198,7 @@ flowchart TD
     AD --> AE[AI Diagnostic Report - Week 9 Day 6]
 ```
 
-**Figure 4. Software and data flow diagram.** Live hardware frames and CSV log frames are normalized into `CanFrame` objects before passing through the same validation, dispatch, decoding, statistics, counter tracking, and fault-analysis pipeline.
+**Figure 5. Software and data flow diagram.** Live hardware frames and CSV log frames are normalized into `CanFrame` objects before passing through the same validation, dispatch, decoding, statistics, counter tracking, and fault-analysis pipeline.
 
 ---
 
