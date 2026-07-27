@@ -79,13 +79,15 @@ The Waveshare USB-CAN software confirmed live CAN traffic from the STM32 FreeRTO
 
 ## Demo Videos
 
+GitHub may show a "file is too big" preview message when opening committed MP4 files directly. The links below point to the raw video files from the demo-video commit.
+
 ### Decoder Live Ingestion Demo
 
-[Watch or download the decoder live-ingestion demo](./media/decoder_demo.mp4)
+[Watch or download the decoder live-ingestion demo](https://github.com/Jnwaneli/cpp-can-telemetry-decoder/raw/f3a6736e6690e3cf159d3a21ed73a5915a6f0ba8/media/decoder_demo.mp4)
 
 ### Waveshare Receive Demo
 
-[Watch or download the Waveshare receive demo](./media/waveshare_demo.mp4)
+[Watch or download the Waveshare receive demo](https://github.com/Jnwaneli/cpp-can-telemetry-decoder/raw/f3a6736e6690e3cf159d3a21ed73a5915a6f0ba8/media/waveshare_demo.mp4)
 
 Suggested demo caption:
 
