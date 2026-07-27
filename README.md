@@ -37,17 +37,9 @@ AI diagnostic assistant: Week 9 Day 6
 
 The tested hardware wiring connects the STM32 NUCLEO-G431RB to the Waveshare USB-CAN adapter through an SN65HVD230 CAN transceiver.
 
-```text
-NUCLEO-G431RB
-        ↓ FDCAN1_TX / FDCAN1_RX
-SN65HVD230 CAN transceiver
-        ↓ CANH / CANL
-Waveshare USB-CAN adapter
-        ↓ USB
-PC / C++ decoder
-```
+<img src="./media/freertos_can_hardware_wiring.png" alt="STM32 FreeRTOS CAN hardware wiring schematic" width="900">
 
-<img src="./media/freertos_can_hardware_wiring.svg?cache=hardware-schematic-final" alt="STM32 FreeRTOS CAN hardware wiring schematic" width="900">
+**Figure 1. STM32 FreeRTOS CAN hardware wiring schematic.** The NUCLEO-G431RB connects to the SN65HVD230 CAN transceiver using FDCAN1_TX, FDCAN1_RX, 3.3 V, and GND. The SN65HVD230 connects to the Waveshare USB-CAN adapter through CANH, CANL, and common ground. The Waveshare adapter connects to the PC over USB for live receive testing and C++ decoder integration.
 
 Key wiring notes:
 
@@ -59,7 +51,6 @@ NUCLEO GND       → SN65HVD230 GND
 SN65HVD230 CANH  → Waveshare CANH
 SN65HVD230 CANL  → Waveshare CANL
 SN65HVD230 GND   → Waveshare GND
-```
 
 The STM32 FDCAN pins do not connect directly to CANH and CANL. The SN65HVD230 transceiver converts STM32 logic-level CAN signals into physical CAN bus signals.
 
