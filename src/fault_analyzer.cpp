@@ -5,6 +5,8 @@
 FaultAnalyzer::FaultAnalyzer()
     : invalid_dlc_count_(0),
       unknown_id_count_(0),
+      low_voltage_fault_count_(0),
+      high_voltage_fault_count_(0),
       voltage_fault_count_(0),
       temperature_fault_count_(0),
       sensor_invalid_count_(0),
@@ -137,6 +139,13 @@ void FaultAnalyzer::record_report(const FaultReport& report) {
 
         case FaultCategory::Voltage:
             voltage_fault_count_++;
+
+            if (report.message == "Battery voltage too low") {
+                low_voltage_fault_count_++;
+            } else if (report.message == "Battery voltage too high") {
+                high_voltage_fault_count_++;
+            }
+
             break;
 
         case FaultCategory::Temperature:
@@ -165,6 +174,8 @@ void FaultAnalyzer::record_report(const FaultReport& report) {
 void FaultAnalyzer::reset_summary() {
     invalid_dlc_count_ = 0;
     unknown_id_count_ = 0;
+    low_voltage_fault_count_ = 0;
+    high_voltage_fault_count_ = 0;
     voltage_fault_count_ = 0;
     temperature_fault_count_ = 0;
     sensor_invalid_count_ = 0;
@@ -188,6 +199,14 @@ void FaultAnalyzer::print_summary() const {
               << voltage_fault_count_
               << std::endl;
 
+    std::cout << "Low voltage faults: "
+              << low_voltage_fault_count_
+              << std::endl;
+
+    std::cout << "High voltage faults: "
+              << high_voltage_fault_count_
+              << std::endl;
+
     std::cout << "Temperature faults: "
               << temperature_fault_count_
               << std::endl;
@@ -207,4 +226,44 @@ void FaultAnalyzer::print_summary() const {
     std::cout << "Other faults: "
               << other_fault_count_
               << std::endl;
+}
+
+std::size_t FaultAnalyzer::invalid_dlc_count() const {
+    return invalid_dlc_count_;
+}
+
+std::size_t FaultAnalyzer::unknown_id_count() const {
+    return unknown_id_count_;
+}
+
+std::size_t FaultAnalyzer::low_voltage_fault_count() const {
+    return low_voltage_fault_count_;
+}
+
+std::size_t FaultAnalyzer::high_voltage_fault_count() const {
+    return high_voltage_fault_count_;
+}
+
+std::size_t FaultAnalyzer::voltage_fault_count() const {
+    return voltage_fault_count_;
+}
+
+std::size_t FaultAnalyzer::temperature_fault_count() const {
+    return temperature_fault_count_;
+}
+
+std::size_t FaultAnalyzer::sensor_invalid_count() const {
+    return sensor_invalid_count_;
+}
+
+std::size_t FaultAnalyzer::dropped_frame_count() const {
+    return dropped_frame_count_;
+}
+
+std::size_t FaultAnalyzer::stuck_sensor_warning_count() const {
+    return stuck_sensor_warning_count_;
+}
+
+std::size_t FaultAnalyzer::other_fault_count() const {
+    return other_fault_count_;
 }
