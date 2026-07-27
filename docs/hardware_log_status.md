@@ -1,36 +1,39 @@
 # Hardware and Log Status
 
-This document records the current hardware, firmware, and captured-log status for the C++ CAN Telemetry Decoder and Fault Analyzer project.
+This document records the current hardware, firmware, live-ingestion, and generated-output status for the C++ CAN Telemetry Decoder and Fault Analyzer project.
 
 ---
 
 ## Current Status Summary
 
 ```text
-Desktop C++ decoder: Working with CSV/log input
-STM32 simple CAN sender: Removed/archived from repo
-STM32 FreeRTOS CAN sender: Working
-SN65HVD230 CAN transceiver path: Tested
-Waveshare USB-CAN receive workflow: Tested
-FreeRTOS captured log file: Created
-Direct live USB-CAN reader in C++ app: Planned
+Desktop C++ decoder: working with CSV and live Waveshare input
+STM32 FreeRTOS CAN sender: working
+SN65HVD230 CAN transceiver path: tested
+Waveshare USB-CAN receive workflow: tested
+Direct live USB-CAN reader in C++ app: working on Windows
+Structured JSON output: working
+Diagnostic report agent: working after JSON generation
+FreeRTOS captured log file: available
 ```
 
 ---
 
 ## Desktop Decoder Status
 
-The desktop C++ decoder currently reads CAN frames from CSV/log files.
+The desktop C++ decoder supports two input paths:
 
-Current supported input file:
+```text
+CSV/log input through CsvFrameSource
+Live Waveshare USB-CAN serial input through WaveshareSerialFrameSource
+```
+
+Useful test files:
 
 ```text
 data/sample_can_log.csv
-```
-
-Additional test files:
-
-```text
+data/good_frames.csv
+data/fault_frames.csv
 data/stuck_sensor_test.csv
 data/freertos_captured_log.csv
 ```
@@ -44,7 +47,7 @@ The decoder supports:
 0x200 Vehicle Telemetry
 ```
 
-The decoder validates:
+The decoder validates and analyzes:
 
 ```text
 Known CAN IDs
@@ -54,6 +57,18 @@ Status flags
 Dropped counters
 Possible stuck sensor values
 Voltage and temperature thresholds
+```
+
+After a normal decoder run, the program writes:
+
+```text
+output/fault_summary.json
+```
+
+The diagnostic report agent converts that JSON summary into:
+
+```text
+output/diagnostic_report.md
 ```
 
 ---
@@ -66,15 +81,13 @@ The STM32 FreeRTOS CAN sender is implemented in:
 embedded/can_hardware_bridge/stm32_can_sender_freertos/
 ```
 
-This firmware is the current active embedded hardware sender for the project.
+This firmware is the active embedded hardware sender for the project.
 
-The old simple non-FreeRTOS sender was removed to keep the repo focused and professional.
+The FreeRTOS firmware generates simulated telemetry values, passes them through a queue and mutex-protected shared state, and transmits CAN frames through FDCAN1.
 
 ---
 
 ## Hardware Chain Tested
-
-The tested hardware chain is:
 
 ```text
 NUCLEO-G431RB
@@ -83,20 +96,16 @@ SN65HVD230 CAN transceiver
         ↓ CANH/CANL
 Waveshare USB-CAN adapter
         ↓ USB
-PC receive software
+PC receive software / PC C++ live reader
 ```
 
-The STM32 does not connect directly to CANH/CANL.
-
-The STM32 FDCAN TX/RX pins connect to the SN65HVD230 transceiver.
-
-The SN65HVD230 converts STM32 logic-level CAN signals into physical CANH/CANL bus signals.
+The STM32 does not connect directly to CANH/CANL. The STM32 FDCAN TX/RX pins connect to the SN65HVD230 transceiver, and the transceiver converts STM32 logic-level CAN signals into physical CANH/CANL bus signals.
 
 ---
 
 ## Wiring Status
 
-Hardware wiring has been completed and tested.
+Hardware wiring has been completed, photographed, documented, and tested.
 
 Important wiring checks:
 
@@ -122,8 +131,6 @@ This indicates two 120 ohm terminations are active on the CAN bus.
 
 ## STM32CubeIDE / CubeMX Status
 
-The FreeRTOS firmware was configured in STM32CubeIDE/CubeMX.
-
 Important settings:
 
 ```text
@@ -140,7 +147,7 @@ HAL timebase source: TIM6
 USE_NEWLIB_REENTRANT: Enabled
 ```
 
-The Waveshare USB-CAN software was also set to:
+The Waveshare USB-CAN software also uses:
 
 ```text
 500 kbps
@@ -156,7 +163,7 @@ The FreeRTOS firmware uses four tasks:
 
 | Task | Status | Purpose |
 |---|---|---|
-| `SignalGeneratorTask` | Working | Generates fake live telemetry values |
+| `SignalGeneratorTask` | Working | Generates simulated live telemetry values |
 | `ProcessingTask` | Working | Receives samples and updates shared telemetry |
 | `CanTxTask` | Working | Packages and transmits CAN frames |
 | `StatusLedTask` | Working | Blinks heartbeat LED |
@@ -213,19 +220,7 @@ The Waveshare USB-CAN receive tool confirmed all four IDs repeatedly.
 
 ### Missing 0x200 Frame
 
-At first, the Waveshare tool showed:
-
-```text
-0x100
-0x101
-0x102
-```
-
-but not:
-
-```text
-0x200
-```
+At first, the Waveshare tool showed `0x100`, `0x101`, and `0x102`, but not `0x200`.
 
 Likely cause:
 
@@ -241,16 +236,7 @@ Wait for TX FIFO space before sending.
 Add small delays between frame sends.
 ```
 
-After the fix, Waveshare received:
-
-```text
-0x100
-0x101
-0x102
-0x200
-```
-
----
+After the fix, Waveshare received all four IDs repeatedly.
 
 ### Counter Ownership
 
@@ -263,9 +249,7 @@ SignalGeneratorTask runs every 10 ms.
 CanTxTask transmits about every 100 ms.
 ```
 
-If the generator counter were used as the CAN frame counter, transmitted frames could appear to jump by 10.
-
-That would make the desktop decoder falsely report dropped frames.
+If the generator counter were used as the CAN frame counter, transmitted frames could appear to jump. That would make the desktop decoder falsely report dropped frames.
 
 Current decision:
 
@@ -278,63 +262,40 @@ CanTxTask owns the CAN transmit counter.
 
 ## Captured FreeRTOS Log Status
 
-A captured FreeRTOS log file has been created:
+A captured FreeRTOS log file is available:
 
 ```text
 data/freertos_captured_log.csv
 ```
 
-Short proof version:
-
-```csv
-id,dlc,b0,b1,b2,b3,b4,b5,b6,b7
-100,8,7A,0D,DE,0D,42,0E,07,4B
-101,8,48,31,5F,01,00,00,00,00
-102,8,07,00,01,00,00,00,00,00
-200,8,80,02,0A,0F,03,29,00,4B
-100,8,B0,04,14,05,78,05,07,4C
-101,8,3F,31,60,01,00,00,00,00
-102,8,07,00,01,00,00,00,00,00
-200,8,96,02,1D,10,03,34,00,4C
-```
-
-This log proves that the STM32 FreeRTOS sender can generate all four CAN frame types and that the captured frames can be converted into the desktop decoder’s CSV input format.
+This log proves that the STM32 FreeRTOS sender can generate all four CAN frame types and that captured frames can be processed by the desktop decoder's CSV input path.
 
 ---
 
-## C++ Decoder Integration Status
+## Live C++ Decoder Integration Status
 
-The desktop decoder can process CSV logs.
-
-Current workflow:
+The desktop C++ application can read live Waveshare USB-CAN traffic directly through:
 
 ```text
-STM32 FreeRTOS firmware
-        ↓
-Waveshare USB-CAN capture
-        ↓
-data/freertos_captured_log.csv
-        ↓
-Desktop C++ decoder
+WaveshareSerialFrameSource
 ```
 
-To test the FreeRTOS capture with the current decoder:
+The live test command is:
 
 ```powershell
-Copy-Item data\sample_can_log.csv data\sample_can_log_backup.csv
-Copy-Item data\freertos_captured_log.csv data\sample_can_log.csv
-.\main.exe
-Copy-Item data\sample_can_log_backup.csv data\sample_can_log.csv
+.\main.exe --waveshare-serial COM4 2000
 ```
 
-Expected decoder behavior:
+The validated live result was:
 
 ```text
-0x100 decodes as Analog Inputs
-0x101 decodes as Battery and Temperature
-0x102 decodes as Status Flags
-0x200 decodes as Vehicle Telemetry
-Dropped frames should be 0 if counters are sequential
+Frames processed: 2000
+Valid frames: 2000
+Unknown IDs: 0
+Invalid DLC: 0
+Faults: 0
+Warnings: 0
+Dropped frames: 0
 ```
 
 ---
@@ -343,6 +304,7 @@ Dropped frames should be 0 if counters are sequential
 
 ```text
 Desktop CSV/log decoder
+Desktop live Waveshare serial decoder path
 STM32 FreeRTOS CAN sender
 SN65HVD230 physical CAN bridge
 Waveshare USB-CAN receive workflow
@@ -350,31 +312,20 @@ Multi-frame STM32 CAN transmission
 Captured FreeRTOS CSV log
 Queue and mutex FreeRTOS architecture
 Transmit counter owned by CanTxTask
+Structured fault_summary.json output
+Diagnostic report agent
 ```
 
 ---
 
-## In Progress
+## Future Work
 
 ```text
-Final README polish
-Final documentation cleanup
-Testing freertos_captured_log.csv through the C++ decoder
-Cleaning build artifacts from repo
-```
-
----
-
-## Planned Future Work
-
-```text
-Direct live USB-CAN reader inside the C++ app
-SocketCAN/can0 Linux workflow
+Linux SocketCAN/can0 workflow
 candump-style log parser
-fault_summary.json output
-AI-assisted diagnostic report generator
 Real ADC or sensor-based telemetry instead of simulated values
 Optional FreeRTOS FaultInjectTask
+Production-grade serial reconnect/error recovery
 ```
 
 ---
@@ -383,7 +334,7 @@ Optional FreeRTOS FaultInjectTask
 
 The hardware bridge is working.
 
-The project now has a verified embedded-to-PC CAN workflow:
+The project has a verified embedded-to-PC CAN workflow:
 
 ```text
 STM32 FreeRTOS telemetry sender
@@ -392,13 +343,11 @@ SN65HVD230 CAN transceiver
         ↓
 Waveshare USB-CAN adapter
         ↓
-Captured CSV log
+Desktop C++ decoder
         ↓
-C++ CAN Telemetry Decoder and Fault Analyzer
-```
-
-Current limitation:
-
-```text
-The desktop C++ app still reads captured logs, not live USB-CAN traffic directly.
+output/fault_summary.json
+        ↓
+Diagnostic report agent
+        ↓
+output/diagnostic_report.md
 ```
