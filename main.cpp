@@ -8,13 +8,14 @@
 
 #include "can_dispatcher.hpp"
 #include "can_frame.hpp"
-#include "can_log_parser.hpp"
 #include "can_validation.hpp"
 #include "circular_buffer.hpp"
+#include "csv_frame_source.hpp"
 #include "decoder_stats.hpp"
 #include "fault_analyzer.hpp"
 #include "fault_report.hpp"
 #include "frame_report.hpp"
+#include "frame_source.hpp"
 #include "parser_state.hpp"
 #include "telemetry_decoder.hpp"
 
@@ -317,6 +318,30 @@ std::vector<FrameReport> process_buffered_frames(CircularBuffer& rx_buffer,
     return reports;
 }
 
+std::vector<FrameReport> process_live_frames(FrameSource& source,
+                                             CanDispatcher& dispatcher,
+                                             DecoderStats& stats,
+                                             FaultAnalyzer& fault_summary_tracker) {
+    std::cout << "Processing CAN frames in live-style mode:" << std::endl;
+
+    std::vector<FrameReport> reports;
+    CanFrame frame{};
+    std::size_t frame_number = 1;
+
+    while (source.read_next(frame)) {
+        FrameReport report =
+            process_frame(frame_number, frame, dispatcher, stats, fault_summary_tracker);
+
+        reports.push_back(report);
+        frame_number++;
+    }
+
+    std::cout << "------------------------------" << std::endl;
+    std::cout << "Live-style frame source finished." << std::endl;
+
+    return reports;
+}
+
 void print_summary_report(const std::vector<FrameReport>& reports,
                           const DecoderStats& stats,
                           const FaultAnalyzer& fault_summary_tracker) {
@@ -356,18 +381,39 @@ void run_decoder_pipeline(const std::vector<CanFrame>& can_log) {
     print_summary_report(reports, stats, fault_summary_tracker);
 }
 
-int main() {
-    std::vector<CanFrame> can_log = load_can_log_from_csv("data/sample_can_log.csv");
+void run_decoder_live(FrameSource& source) {
+    TelemetryDecoder decoder;
+    CanDispatcher dispatcher(decoder);
+    DecoderStats stats;
+    FaultAnalyzer fault_summary_tracker;
 
-    if (can_log.empty()) {
+    std::vector<FrameReport> reports =
+        process_live_frames(source, dispatcher, stats, fault_summary_tracker);
+
+    std::cout << "Decoder frames seen: "
+              << decoder.frames_seen()
+              << std::endl;
+
+    decoder.print_signal_stats();
+
+    print_summary_report(reports, stats, fault_summary_tracker);
+}
+
+int main() {
+    CsvFrameSource source("data/sample_can_log.csv");
+
+    if (!source.is_open()) {
         std::cout << "Using fallback built-in CAN log."
                   << std::endl
                   << std::endl;
 
-        can_log = create_fallback_can_log();
+        std::vector<CanFrame> fallback_log = create_fallback_can_log();
+        run_decoder_pipeline(fallback_log);
+
+        return 0;
     }
 
-    run_decoder_pipeline(can_log);
+    run_decoder_live(source);
 
     return 0;
 }
