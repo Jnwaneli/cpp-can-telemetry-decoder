@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Week 9 Day 5 adds structured machine-readable diagnostic output to the C++ CAN decoder.
+This document describes the structured machine-readable diagnostic output produced by the C++ CAN decoder.
 
 After each successful CSV or live Waveshare decoder run, the program writes:
 
@@ -10,7 +10,7 @@ After each successful CSV or live Waveshare decoder run, the program writes:
 output/fault_summary.json
 ```
 
-This file summarizes the same decoder and fault-analysis results that are printed in the terminal, but in JSON format so the next Week 9 step can use it as input for the AI-assisted diagnostic report generator.
+This file summarizes the same decoder and fault-analysis results that are printed in the terminal, but in JSON format so the diagnostic report agent can explain the run in a readable engineering report.
 
 ---
 
@@ -37,7 +37,7 @@ Example commands:
 
 ## Output Schema
 
-Example structure:
+Example clean live summary:
 
 ```json
 {
@@ -85,20 +85,22 @@ src/fault_summary_writer.cpp
 
 The writer uses the existing `DecoderStats` and `FaultAnalyzer` counters, creates the `output/` directory when needed, and writes `output/fault_summary.json` after the terminal summary is printed.
 
-`FaultAnalyzer` now exposes summary counter getters so the JSON writer can access diagnostic totals without duplicating fault-analysis logic.
+`FaultAnalyzer` exposes summary counter getters so the JSON writer can access diagnostic totals without duplicating fault-analysis logic.
 
 ---
 
-## Week 9 Connection
+## Diagnostic Report Connection
 
-This file is the bridge between the C++ decoder and the Week 9 Day 6 diagnostic assistant.
+The JSON summary is the bridge between the C++ decoder and the diagnostic report agent.
 
 ```text
 C++ decoder run
         ↓
 output/fault_summary.json
         ↓
-AI-assisted diagnostic report generator
+Diagnostic report agent
         ↓
 output/diagnostic_report.md
 ```
+
+The C++ decoder performs deterministic parsing and fault detection. The diagnostic report agent only explains the structured fault summary.
