@@ -1,110 +1,110 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="560" viewBox="0 0 1500 560">
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1120" viewBox="0 0 1800 1120">
   <defs>
-    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
-      <path d="M0,0 L0,6 L9,3 z" fill="#f5f5f5"/>
-    </marker>
+    <pattern id="smallGrid" width="10" height="10" patternUnits="userSpaceOnUse">
+      <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#202020" stroke-width="1"/>
+    </pattern>
+    <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+      <rect width="50" height="50" fill="url(#smallGrid)"/>
+      <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#303030" stroke-width="1.2"/>
+    </pattern>
     <style>
       .bg { fill: #111111; }
-      .box { fill: #181818; stroke: #f5f5f5; stroke-width: 2; }
-      .pin { fill: #111111; stroke: #f5f5f5; stroke-width: 2; }
-      .wire { stroke: #f5f5f5; stroke-width: 2.2; fill: none; }
-      .bus { stroke: #f5f5f5; stroke-width: 3; fill: none; }
-      .text { fill: #ffffff; font-family: Arial, Helvetica, sans-serif; font-size: 18px; }
-      .small { fill: #ffffff; font-family: Arial, Helvetica, sans-serif; font-size: 15px; }
-      .tiny { fill: #ffffff; font-family: Arial, Helvetica, sans-serif; font-size: 13px; }
-      .label { fill: #ffffff; font-family: Arial, Helvetica, sans-serif; font-size: 16px; font-weight: 600; }
-      .title { fill: #ffffff; font-family: Arial, Helvetica, sans-serif; font-size: 22px; font-weight: 700; }
+      .box { fill: #111111; stroke: #eeeeee; stroke-width: 2; }
+      .wire { fill: none; stroke: #eeeeee; stroke-width: 2; }
+      .pin { fill: #111111; stroke: #eeeeee; stroke-width: 2; }
+      .label { fill: #ffffff; font-family: Arial, Helvetica, sans-serif; font-size: 20px; }
+      .small { fill: #ffffff; font-family: Arial, Helvetica, sans-serif; font-size: 16px; }
+      .tiny { fill: #ffffff; font-family: Arial, Helvetica, sans-serif; font-size: 14px; }
+      .title { fill: #ffffff; font-family: Arial, Helvetica, sans-serif; font-weight: 700; font-size: 34px; }
+      .note { fill: #eeeeee; font-family: Arial, Helvetica, sans-serif; font-size: 24px; }
+      .noteBold { fill: #ffffff; font-family: Arial, Helvetica, sans-serif; font-weight: 700; font-size: 27px; }
     </style>
   </defs>
 
-  <rect class="bg" x="0" y="0" width="1500" height="560"/>
+  <rect class="bg" x="0" y="0" width="1800" height="1120"/>
+  <rect x="0" y="0" width="1800" height="900" fill="url(#grid)"/>
 
-  <text class="title" x="750" y="34" text-anchor="middle">STM32 FreeRTOS CAN Hardware Wiring</text>
+  <!-- NUCLEO-G431RB block -->
+  <rect class="box" x="90" y="220" width="230" height="230"/>
+  <circle class="pin" cx="180" cy="220" r="14"/>
+  <circle class="pin" cx="245" cy="220" r="14"/>
+  <circle class="pin" cx="180" cy="450" r="14"/>
+  <circle class="pin" cx="245" cy="450" r="14"/>
+  <text class="small" x="126" y="260">FDCAN_TX</text>
+  <text class="small" x="219" y="260">FDCAN_RX</text>
+  <text class="small" x="155" y="420">GND</text>
+  <text class="small" x="226" y="420">3.3V</text>
+  <text class="label" x="154" y="320">NUCLEO-</text>
+  <text class="label" x="161" y="347">G431RB</text>
 
-  <!-- Nucleo block -->
-  <rect class="box" x="60" y="130" width="220" height="220"/>
-  <text class="text" x="170" y="220" text-anchor="middle">NUCLEO-G431RB</text>
-  <circle class="pin" cx="95" cy="155" r="11"/>
-  <text class="tiny" x="95" y="186" text-anchor="middle">FDCAN_TX</text>
-  <circle class="pin" cx="245" cy="155" r="11"/>
-  <text class="tiny" x="245" y="186" text-anchor="middle">FDCAN_RX</text>
-  <circle class="pin" cx="95" cy="330" r="11"/>
-  <text class="tiny" x="95" y="305" text-anchor="middle">GND</text>
-  <circle class="pin" cx="245" cy="330" r="11"/>
-  <text class="tiny" x="245" y="305" text-anchor="middle">3.3V</text>
-
-  <!-- Transceiver block -->
-  <rect class="box" x="455" y="120" width="260" height="240"/>
-  <text class="text" x="585" y="220" text-anchor="middle">SN65HVD230</text>
-  <text class="text" x="585" y="245" text-anchor="middle">CAN Transceiver</text>
-  <circle class="pin" cx="500" cy="145" r="11"/>
-  <text class="tiny" x="500" y="176" text-anchor="middle">TXD</text>
-  <circle class="pin" cx="670" cy="145" r="11"/>
-  <text class="tiny" x="670" y="176" text-anchor="middle">RXD</text>
-  <circle class="pin" cx="500" cy="340" r="11"/>
-  <text class="tiny" x="500" y="315" text-anchor="middle">GND</text>
-  <circle class="pin" cx="670" cy="340" r="11"/>
-  <text class="tiny" x="670" y="315" text-anchor="middle">VCC</text>
-  <circle class="pin" cx="705" cy="205" r="11"/>
-  <text class="tiny" x="676" y="210" text-anchor="end">CANH</text>
-  <circle class="pin" cx="705" cy="280" r="11"/>
-  <text class="tiny" x="676" y="285" text-anchor="end">CANL</text>
+  <!-- SN65HVD230 block -->
+  <rect class="box" x="540" y="205" width="250" height="250"/>
+  <circle class="pin" cx="630" cy="205" r="14"/>
+  <circle class="pin" cx="700" cy="205" r="14"/>
+  <circle class="pin" cx="765" cy="280" r="14"/>
+  <circle class="pin" cx="765" cy="350" r="14"/>
+  <circle class="pin" cx="630" cy="455" r="14"/>
+  <circle class="pin" cx="700" cy="455" r="14"/>
+  <text class="label" x="619" y="260">TXD</text>
+  <text class="label" x="689" y="260">RXD</text>
+  <text class="label" x="728" y="305">CANH</text>
+  <text class="label" x="730" y="378">CANL</text>
+  <text class="label" x="615" y="410">GND</text>
+  <text class="label" x="681" y="410">VCC</text>
+  <text class="label" x="613" y="320">SN65HVD230</text>
+  <text class="label" x="650" y="348">CAN</text>
+  <text class="label" x="625" y="376">Transceiver</text>
 
   <!-- Waveshare block -->
-  <rect class="box" x="845" y="120" width="310" height="240"/>
-  <text class="text" x="1000" y="250" text-anchor="middle">Waveshare USB-CAN Adapter</text>
-  <circle class="pin" cx="880" cy="165" r="11"/>
-  <text class="small" x="910" y="171">CANH</text>
-  <circle class="pin" cx="880" cy="240" r="11"/>
-  <text class="small" x="910" y="246">CANL</text>
-  <circle class="pin" cx="880" cy="315" r="11"/>
-  <text class="small" x="910" y="321">GND</text>
-  <rect x="1128" y="220" width="27" height="60" fill="#111111" stroke="#f5f5f5" stroke-width="2"/>
+  <rect class="box" x="930" y="200" width="370" height="260"/>
+  <circle class="pin" cx="970" cy="240" r="14"/>
+  <circle class="pin" cx="970" cy="310" r="14"/>
+  <circle class="pin" cx="970" cy="390" r="14"/>
+  <text class="label" x="948" y="275">CANH</text>
+  <text class="label" x="948" y="347">CANL</text>
+  <text class="label" x="948" y="423">GND</text>
+  <text class="label" x="1015" y="325">Waveshare USB-CAN Adapter</text>
+  <rect class="box" x="1248" y="265" width="52" height="75"/>
 
   <!-- PC block -->
-  <rect class="box" x="1245" y="155" width="220" height="170"/>
-  <text class="text" x="1355" y="235" text-anchor="middle">PC / Waveshare</text>
-  <text class="text" x="1355" y="260" text-anchor="middle">Receive Software</text>
-  <text class="text" x="1355" y="285" text-anchor="middle">/ C++ Decoder</text>
+  <rect class="box" x="1450" y="170" width="330" height="320"/>
+  <text class="label" x="1510" y="320">PC / Waveshare Receive Software / C++</text>
+  <text class="label" x="1580" y="350">Decoder</text>
 
-  <!-- Wires Nucleo to transceiver -->
-  <path class="wire" d="M95 155 L95 80 L500 80 L500 134"/>
-  <text class="label" x="300" y="67" text-anchor="middle">PA12 / FDCAN1_TX → TXD</text>
+  <!-- FDCAN TX/RX wires -->
+  <path class="wire" d="M 180 220 L 180 80 L 630 80 L 630 205"/>
+  <path class="wire" d="M 245 220 L 245 132 L 700 132 L 700 205"/>
+  <text class="label" x="430" y="63">FDCAN1_TX → TXD</text>
+  <text class="label" x="420" y="121">FDCAN1_RX ← RXD</text>
 
-  <path class="wire" d="M670 134 L670 95 L245 95 L245 155"/>
-  <text class="label" x="460" y="115" text-anchor="middle">PA11 / FDCAN1_RX ← RXD</text>
+  <!-- Power and ground wires -->
+  <path class="wire" d="M 245 450 L 245 590 L 700 590 L 700 455"/>
+  <path class="wire" d="M 180 450 L 180 690 L 560 690 L 560 760"/>
+  <path class="wire" d="M 630 455 L 630 620 L 590 620 L 590 760"/>
+  <path class="wire" d="M 970 390 L 970 650 L 620 650 L 620 760"/>
 
-  <path class="wire" d="M245 341 L245 455 L670 455 L670 351"/>
-  <text class="small" x="420" y="474" text-anchor="middle">3.3V → VCC</text>
+  <!-- Common ground triangle -->
+  <path d="M 500 760 L 680 760 L 590 875 Z" fill="#111111" stroke="#eeeeee" stroke-width="2"/>
+  <text class="label" x="542" y="812">COMMON</text>
+  <text class="label" x="548" y="842">GROUND</text>
 
-  <path class="wire" d="M95 341 L95 490 L500 490 L500 351"/>
+  <!-- CAN bus wires and termination -->
+  <path class="wire" d="M 765 280 L 850 280 L 850 242 L 970 242"/>
+  <path class="wire" d="M 765 350 L 850 350 L 850 312 L 970 312"/>
+  <rect class="box" x="800" y="302" width="58" height="30"/>
+  <text class="small" x="807" y="324">120 Ω</text>
+  <path class="wire" d="M 829 280 L 829 302"/>
+  <path class="wire" d="M 829 332 L 829 350"/>
 
-  <!-- CAN bus wires -->
-  <path class="bus" d="M716 205 L800 205 L800 165 L869 165"/>
-  <path class="bus" d="M716 280 L800 280 L800 240 L869 240"/>
-  <text class="label" x="785" y="142" text-anchor="middle">CANH / CANL physical bus</text>
+  <!-- USB wire -->
+  <path class="wire" d="M 1300 302 L 1450 302"/>
 
-  <!-- Termination resistor -->
-  <rect x="765" y="213" width="50" height="28" fill="#181818" stroke="#f5f5f5" stroke-width="2"/>
-  <text class="small" x="790" y="233" text-anchor="middle">120 Ω</text>
-  <path class="wire" d="M790 205 L790 213"/>
-  <path class="wire" d="M790 241 L790 280"/>
-
-  <!-- Ground from Waveshare -->
-  <path class="wire" d="M880 326 L880 490 L500 490"/>
-
-  <!-- USB to PC -->
-  <path class="wire" d="M1155 250 L1245 250" marker-end="url(#arrow)"/>
-  <text class="small" x="1200" y="235" text-anchor="middle">USB</text>
-
-  <!-- Common ground symbol -->
-  <polygon points="385,495 455,495 420,545" fill="#181818" stroke="#f5f5f5" stroke-width="2"/>
-  <text class="small" x="420" y="518" text-anchor="middle">COMMON</text>
-  <text class="small" x="420" y="538" text-anchor="middle">GROUND</text>
-  <path class="wire" d="M420 490 L420 495"/>
-
-  <!-- Notes -->
-  <text class="small" x="750" y="405" text-anchor="middle">Classic CAN • 500 kbps • Standard 11-bit IDs • DLC = 8 bytes</text>
-  <text class="small" x="750" y="430" text-anchor="middle">CANH-to-CANL measured about 60 Ω with power off, confirming two active 120 Ω terminations in parallel.</text>
-  <text class="small" x="750" y="455" text-anchor="middle">STM32 FDCAN_TX/FDCAN_RX do not connect directly to CANH/CANL; the SN65HVD230 performs the physical bus conversion.</text>
+  <!-- Bottom figure panel -->
+  <rect x="0" y="900" width="1800" height="220" fill="#111111"/>
+  <line x1="0" y1="900" x2="1800" y2="900" stroke="#eeeeee" stroke-width="2"/>
+  <text class="title" x="430" y="955">Figure 1. STM32 FreeRTOS CAN Hardware Wiring Schematic</text>
+  <text class="noteBold" x="80" y="1005">Notes:</text>
+  <text class="note" x="80" y="1040">PA12 / FDCAN1_TX → TXD and PA11 / FDCAN1_RX ← RXD are STM32 logic-level CAN signals.</text>
+  <text class="note" x="80" y="1070">SN65HVD230 converts logic-level CAN to physical CANH/CANL; STM32 pins do not connect directly to CANH/CANL.</text>
+  <text class="note" x="80" y="1100">Bus: Classic CAN, 500 kbps, standard 11-bit IDs, DLC = 8 bytes. Termination: external 120 Ω + Waveshare 120 Ω → about 60 Ω measured power off.</text>
 </svg>
