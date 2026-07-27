@@ -83,11 +83,11 @@ GitHub may show a "file is too big" preview message when opening committed MP4 f
 
 ### Decoder Live Ingestion Demo
 
-[Watch or download the decoder live-ingestion demo](https://github.com/Jnwaneli/cpp-can-telemetry-decoder/raw/f3a6736e6690e3cf159d3a21ed73a5915a6f0ba8/media/decoder_demo.mp4)
+[Watch or download the decoder live-ingestion demo](https://github.com/Jnwaneli/cpp-can-telemetry-decoder/raw/main/media/decoder_demo.mp4?cache=muted)
 
 ### Waveshare Receive Demo
 
-[Watch or download the Waveshare receive demo](https://github.com/Jnwaneli/cpp-can-telemetry-decoder/raw/f3a6736e6690e3cf159d3a21ed73a5915a6f0ba8/media/waveshare_demo.mp4)
+[Watch or download the Waveshare receive demo](https://github.com/Jnwaneli/cpp-can-telemetry-decoder/raw/main/media/waveshare_demo.mp4?cache=muted)
 
 Suggested demo caption:
 
