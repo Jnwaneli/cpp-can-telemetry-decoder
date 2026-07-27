@@ -182,7 +182,7 @@ def build_next_steps(summary: Dict[str, Any]) -> List[str]:
     if get_int(summary, "faults") == 0 and get_int(summary, "warnings") == 0:
         next_steps.append("- Save this report as evidence of a clean live or logged decoder run.")
         next_steps.append("- Use the same workflow with injected fault data to demonstrate fault-report behavior.")
-        next_steps.append("- Continue to the final Week 9 polish step: connect this report generator to the README/demo documentation.")
+        next_steps.append("- Reference this report in project documentation or demos as proof of the full diagnostic pipeline.")
     else:
         next_steps.append("- Review each detected fault category and compare it against docs/fault_rules.md.")
         next_steps.append("- Re-run the decoder after correcting the suspected issue.")
