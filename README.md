@@ -8,7 +8,7 @@ The desktop C++ application validates CAN message IDs and DLC values, decodes li
 
 The project also includes an STM32 FreeRTOS CAN telemetry sender that generates simulated live telemetry values and transmits CAN frames through an SN65HVD230 CAN transceiver to a Waveshare USB-CAN adapter.
 
-The Week 9 upgrade adds a `FrameSource` input architecture and a direct Waveshare serial live reader on Windows. The C++ application can now open the Waveshare COM port, receive hardware-generated CAN frames, convert them into `CanFrame` objects, and feed them through the same dispatcher, decoder, and fault analyzer used by CSV mode.
+The Week 9 upgrade adds a `FrameSource` input architecture and a direct Waveshare serial live reader on Windows. The C++ application can open the Waveshare COM port, receive hardware-generated CAN frames, convert them into `CanFrame` objects, and feed them through the same dispatcher, decoder, and fault analyzer used by CSV mode.
 
 ---
 
@@ -31,6 +31,120 @@ AI diagnostic assistant: Week 9 Day 6
 
 ---
 
+## Live Demo Proof
+
+The project was validated using direct live CAN ingestion from the Waveshare USB-CAN adapter into the C++ decoder.
+
+Command used:
+
+```powershell
+.\main.exe --waveshare-serial COM4 2000
+```
+
+Final live result:
+
+```text
+Frames processed: 2000
+Valid frames: 2000
+Unknown IDs: 0
+Invalid DLC: 0
+Faults: 0
+Warnings: 0
+Dropped frames: 0
+```
+
+Because the STM32 firmware transmits four CAN frame types per transmit cycle, this run represents 500 telemetry cycles.
+
+```text
+2000 total frames / 4 frame types = 500 telemetry cycles
+```
+
+Terminal summary screenshot:
+
+![Live decoder summary](media/live_decoder_summary.png)
+
+Short demo videos were captured for:
+
+```text
+1. Waveshare USB-CAN receive workflow
+2. C++ live decoder 2,000-frame run
+```
+
+The raw MP4 files are not committed directly to keep the repository lightweight. They should be uploaded through GitHub's web UI and linked here.
+
+Video upload placeholder:
+
+```text
+https://github.com/Jnwaneli/cpp-can-telemetry-decoder/issues/1
+```
+
+Suggested demo caption:
+
+```text
+Live CAN test: decoded 2,000 consecutive STM32-generated CAN frames through a Waveshare USB-CAN live serial backend at 500 kbps, with 0 unknown IDs, 0 invalid DLC errors, 0 dropped-frame faults, and 0 diagnostic warnings.
+```
+
+---
+
+## Software/Data Flow Diagram
+
+```mermaid
+flowchart TD
+    A[STM32 FreeRTOS Sender] --> B[SignalGeneratorTask]
+    B -->|SensorSample every 10 ms| C[sensorQueueHandle]
+    C --> D[ProcessingTask]
+    D -->|mutex-protected update| E[latestTelemetry]
+    E -->|local copy| F[CanTxTask]
+    F -->|4 CAN frames every ~100 ms| G[STM32 FDCAN1]
+    G --> H[SN65HVD230 CAN Transceiver]
+    H --> I[CANH / CANL Bus]
+    I --> J[Waveshare USB-CAN Adapter]
+    J -->|Windows COM port| K[WaveshareSerialFrameSource]
+
+    L[CSV CAN Log] --> M[CsvFrameSource]
+
+    K --> N[CanFrame]
+    M --> N
+
+    N --> O[run_decoder_live]
+    O --> P[process_frame]
+    P --> Q[Validate CAN ID and DLC]
+    Q --> R{Valid frame?}
+
+    R -->|No| S[Record validation fault]
+    R -->|Yes| T[CanDispatcher]
+
+    T --> U[TelemetryDecoder]
+    U --> V[Decode by CAN ID]
+
+    V --> V100[0x100 Analog Inputs]
+    V --> V101[0x101 Battery and Temperature]
+    V --> V102[0x102 Status Flags]
+    V --> V200[0x200 Vehicle Telemetry]
+
+    V100 --> W[SignalStats]
+    V101 --> W
+    V100 --> X[CounterTracker]
+    V200 --> X
+    V100 --> Y[StuckSensorTracker]
+
+    W --> Z[FaultAnalyzer]
+    X --> Z
+    Y --> Z
+    V101 --> Z
+    V102 --> Z
+    V200 --> Z
+    S --> Z
+
+    Z --> AA[FrameReport]
+    Z --> AB[DecoderStats]
+    Z --> AC[Terminal Summary]
+    Z --> AD[fault_summary.json - Week 9 Day 5]
+    AD --> AE[AI Diagnostic Report - Week 9 Day 6]
+```
+
+---
+
 ## Key Features
 
 ```text
@@ -48,58 +162,6 @@ CounterTracker dropped-frame detection
 StuckSensorTracker warning logic
 STM32 FreeRTOS CAN telemetry sender
 Direct hardware-generated CAN ingestion through Waveshare USB-CAN
-```
-
----
-
-## System Architecture
-
-```text
-STM32 FreeRTOS sender
-        ↓
-SN65HVD230 CAN transceiver
-        ↓
-Waveshare USB-CAN adapter
-        ↓
-WaveshareSerialFrameSource
-        ↓
-CanFrame
-        ↓
-run_decoder_live()
-        ↓
-process_frame()
-        ↓
-CanDispatcher
-        ↓
-TelemetryDecoder
-        ↓
-FaultAnalyzer
-        ↓
-terminal summary
-```
-
-CSV mode uses the same decoder path:
-
-```text
-CsvFrameSource
-        ↓
-CanFrame
-        ↓
-run_decoder_live()
-        ↓
-process_frame()
-        ↓
-CanDispatcher
-        ↓
-TelemetryDecoder
-        ↓
-FaultAnalyzer
-```
-
-A full Mermaid software/data-flow diagram is available in:
-
-```text
-docs/software_data_flow.md
 ```
 
 ---
@@ -166,6 +228,9 @@ cpp-can-telemetry-decoder/
 │   ├── real_time_cpp_ingestion.md
 │   ├── software_data_flow.md
 │   └── live_waveshare_test_day4.md
+│
+├── media/
+│   └── live_decoder_summary.png
 │
 ├── embedded/
 │   └── can_hardware_bridge/
@@ -267,7 +332,7 @@ Run the default sample log:
 .\main.exe
 ```
 
-Expected summary:
+Expected sample-log summary:
 
 ```text
 Frames processed: 10
@@ -320,64 +385,6 @@ The final argument is the frame limit. For example, this command reads and decod
 
 ---
 
-## Live Waveshare CAN Ingestion Status
-
-The project now includes a direct Waveshare USB-CAN live ingestion path on Windows.
-
-The C++ application opens the Waveshare COM port, configures the adapter for the project CAN workflow, reads incoming CAN packets, converts them into `CanFrame` objects, and feeds them through the same dispatcher, telemetry decoder, and fault analyzer used by CSV mode.
-
-Validated 100-frame live test:
-
-```text
-Frames processed: 100
-Valid frames: 100
-Unknown IDs: 0
-Invalid DLC: 0
-Faults: 0
-Warnings: 0
-Dropped frames: 0
-```
-
-Because the STM32 firmware transmits four CAN frame types per cycle, 100 total frames represents 25 telemetry cycles.
-
-Extended demo target:
-
-```text
-Frames processed: 2000
-Valid frames: 2000
-Unknown IDs: 0
-Invalid DLC: 0
-Faults: 0
-Warnings: 0
-Dropped frames: 0
-```
-
-A 2,000-frame run represents 500 telemetry cycles.
-
----
-
-## Live Demo Media
-
-Recommended demo assets:
-
-```text
-media/hardware_setup.jpg
-media/stm32_sn65hvd230_wiring.jpg
-media/waveshare_usb_can.jpg
-media/live_decoder_summary.png
-README video link from GitHub issue/comment upload
-```
-
-Do not commit large raw video files directly. Upload short MP4 demo videos through GitHub's web UI and link them from this README.
-
-Suggested demo caption:
-
-```text
-Live CAN test: decoded 2,000 consecutive STM32-generated CAN frames through a Waveshare USB-CAN live serial backend at 500 kbps, with 0 unknown IDs, 0 invalid DLC errors, 0 dropped-frame faults, and 0 diagnostic warnings.
-```
-
----
-
 ## STM32 FreeRTOS Telemetry Sender
 
 The STM32 firmware project is located at:
@@ -409,6 +416,35 @@ The sender transmits these CAN IDs repeatedly:
 ```
 
 `CanTxTask` owns the CAN transmit counter so the desktop decoder does not falsely detect dropped frames.
+
+---
+
+## Hardware Path
+
+```text
+NUCLEO-G431RB FDCAN
+        ↓
+SN65HVD230 CAN transceiver
+        ↓
+CANH/CANL bus
+        ↓
+Waveshare USB-CAN adapter
+        ↓
+Windows COM port
+        ↓
+WaveshareSerialFrameSource
+        ↓
+Desktop C++ decoder
+```
+
+Hardware status:
+
+```text
+CAN bitrate: 500 kbps
+Frame type: Standard Classic CAN
+DLC: 8 bytes
+Termination: about 60 ohms measured CANH-to-CANL with power off
+```
 
 ---
 
@@ -478,4 +514,4 @@ The serial backend works for the demo workflow but does not yet include producti
 
 This project connects desktop C++ decoding, fault analysis, STM32 FreeRTOS firmware, and real CAN hardware into one end-to-end telemetry workflow.
 
-The STM32 FreeRTOS firmware generates live simulated telemetry frames and sends them over CAN through an SN65HVD230 transceiver. The Waveshare USB-CAN adapter receives those frames, and the C++ application can now read them directly through a live serial backend. Each received packet becomes a `CanFrame` and flows through the same validation, dispatcher, decoder, statistics, and fault-analysis pipeline used for CSV logs.
+The STM32 FreeRTOS firmware generates live simulated telemetry frames and sends them over CAN through an SN65HVD230 transceiver. The Waveshare USB-CAN adapter receives those frames, and the C++ application reads them directly through a live serial backend. Each received packet becomes a `CanFrame` and flows through the same validation, dispatcher, decoder, statistics, and fault-analysis pipeline used for CSV logs.
