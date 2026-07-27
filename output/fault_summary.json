@@ -1,0 +1,17 @@
+{
+  "source": "waveshare_live",
+  "frames_processed": 200,
+  "valid_frames": 200,
+  "invalid_dlc": 0,
+  "unknown_ids": 0,
+  "faults": 0,
+  "warnings": 0,
+  "low_voltage_faults": 0,
+  "high_voltage_faults": 0,
+  "voltage_faults": 0,
+  "high_temperature_faults": 0,
+  "sensor_invalid_faults": 0,
+  "dropped_frames": 0,
+  "possible_stuck_sensors": 0,
+  "other_faults": 0
+}
