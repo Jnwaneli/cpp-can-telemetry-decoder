@@ -51,6 +51,7 @@ NUCLEO GND       → SN65HVD230 GND
 SN65HVD230 CANH  → Waveshare CANH
 SN65HVD230 CANL  → Waveshare CANL
 SN65HVD230 GND   → Waveshare GND
+```
 
 The STM32 FDCAN pins do not connect directly to CANH and CANL. The SN65HVD230 transceiver converts STM32 logic-level CAN signals into physical CAN bus signals.
 
@@ -65,7 +66,7 @@ The project was validated using direct live CAN ingestion from the Waveshare USB
 Command used:
 
 ```powershell
-.\main.exe --waveshare-serial COM4 2000
+./main.exe --waveshare-serial COM4 2000
 ```
 
 Final live result:
@@ -96,11 +97,15 @@ The desktop C++ decoder processed 2,000 live STM32-generated CAN frames through 
 
 <img src="./media/live_decoder_summary.png?cache=live-demo-final" alt="C++ live decoder summary showing 2,000 valid CAN frames" width="900">
 
+**Figure 2. C++ live decoder 2,000-frame summary.** The terminal summary shows 2,000 valid live CAN frames processed through `WaveshareSerialFrameSource` with zero unknown IDs, invalid DLC errors, faults, warnings, or dropped frames.
+
 ### Waveshare USB-CAN Receive Software
 
 The Waveshare USB-CAN software confirmed live CAN traffic from the STM32 FreeRTOS telemetry sender at 500 kbps.
 
 <img src="./media/waveshare_receive.png?cache=receive-final" alt="Waveshare USB-CAN software receiving live CAN frames" width="900">
+
+**Figure 3. Waveshare USB-CAN receive software.** The receive window confirms that the STM32 FreeRTOS sender is transmitting live CAN frames through the SN65HVD230 transceiver into the Waveshare USB-CAN adapter.
 
 ---
 
@@ -112,9 +117,13 @@ The demo videos are intentionally muted. GitHub may show a large-file preview me
 
 [Watch or download the muted decoder live-ingestion demo](https://github.com/Jnwaneli/cpp-can-telemetry-decoder/raw/main/media/decoder_demo.mp4?cache=muted-final)
 
+**Video 1. Decoder live-ingestion demo.** The C++ decoder reads live Waveshare serial frames from the STM32 FreeRTOS CAN sender and processes them through the normal validation, dispatch, decode, statistics, and fault-analysis pipeline.
+
 ### Waveshare Receive Demo
 
 [Watch or download the muted Waveshare receive demo](https://github.com/Jnwaneli/cpp-can-telemetry-decoder/raw/main/media/waveshare_demo.mp4?cache=muted-final)
+
+**Video 2. Waveshare receive demo.** The Waveshare USB-CAN receive software shows live CAN traffic from the STM32 FreeRTOS telemetry sender at 500 kbps.
 
 Suggested demo caption:
 
@@ -180,6 +189,8 @@ flowchart TD
     Z --> AD[fault_summary.json - Week 9 Day 5]
     AD --> AE[AI Diagnostic Report - Week 9 Day 6]
 ```
+
+**Figure 4. Software and data flow diagram.** Live hardware frames and CSV log frames are normalized into `CanFrame` objects before passing through the same validation, dispatch, decoding, statistics, counter tracking, and fault-analysis pipeline.
 
 ---
 
@@ -271,7 +282,7 @@ cpp-can-telemetry-decoder/
 │   └── live_waveshare_test_day4.md
 │
 ├── media/
-│   ├── freertos_can_hardware_wiring.svg
+│   ├── freertos_can_hardware_wiring.png
 │   ├── live_decoder_summary.png
 │   ├── waveshare_receive.png
 │   ├── decoder_demo.mp4
@@ -374,7 +385,7 @@ g++ -std=c++17 -Wall -Wextra -Iinclude main.cpp src/circular_buffer.cpp src/tele
 Run the default sample log:
 
 ```powershell
-.\main.exe
+./main.exe
 ```
 
 Expected sample-log summary:
@@ -392,7 +403,7 @@ Dropped frames: 1
 ### CSV Mode with a Specific File
 
 ```powershell
-.\main.exe --csv data\sample_can_log.csv
+./main.exe --csv data/sample_can_log.csv
 ```
 
 Other useful test files:
@@ -417,7 +428,7 @@ Device Manager → Ports (COM & LPT) → USB-SERIAL / CH340 / Waveshare adapter
 Then run:
 
 ```powershell
-.\main.exe --waveshare-serial COM4 100
+./main.exe --waveshare-serial COM4 100
 ```
 
 Replace `COM4` with the actual COM port assigned to the Waveshare adapter.
@@ -425,7 +436,7 @@ Replace `COM4` with the actual COM port assigned to the Waveshare adapter.
 The final argument is the frame limit. For example, this command reads and decodes 2,000 live CAN frames:
 
 ```powershell
-.\main.exe --waveshare-serial COM4 2000
+./main.exe --waveshare-serial COM4 2000
 ```
 
 ---
@@ -548,7 +559,7 @@ production-grade serial reconnect/error recovery
 ```text
 The live Waveshare serial reader is implemented for the current Windows/Waveshare workflow.
 SocketCAN can0 support is not implemented yet.
-fault_summary.json output is the next Week 9 step.
+fault_summary.json output is planned.
 The AI diagnostic assistant is not implemented yet.
 The STM32 firmware currently generates simulated telemetry values rather than real ADC sensor values.
 Speed scaling for 0x200 is not implemented yet.
