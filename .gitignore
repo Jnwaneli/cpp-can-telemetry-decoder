@@ -13,6 +13,10 @@
 *.d
 *.a
 
+# Desktop C++ executable names
+main
+main.exe
+
 # C/C++ build folders
 Debug/
 Release/
@@ -23,32 +27,53 @@ cmake-build-*/
 */Debug/
 */Release/
 
-# STM32CubeIDE local/project metadata that should not be public if regenerated locally
+# STM32CubeIDE local/project metadata
 .metadata/
 RemoteSystemsTempFiles/
 
-# Temporary files
-*.log
+# IDE/editor local settings
+.vscode/
+.idea/
+*.code-workspace
+
+# Temporary and backup files
 *.tmp
 *.bak
 *.swp
 *.orig
+*.save
+*.old
+
+# Runtime/raw logs that should not bloat the repo
+*.log
+*.trace
+*.dump
 
 # OS files
 .DS_Store
 Thumbs.db
 
-# VS Code / IDE local settings
-.vscode/
-.idea/
+# Private learning/interview-prep notes
+notes/
+interview_prep/
+inteview_prep/
 
-# Executable created by desktop C++ build
-main.exe
-main
+# Large/raw media should be linked from README, not committed directly
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
 
 # Keep project data files
 !data/*.csv
-!data/*.log
+!data/*.txt
 
 # Keep documentation
 !docs/*.md
+
+# Keep lightweight README/demo images
+!media/*.png
+!media/*.jpg
+!media/*.jpeg
+!media/*.gif
