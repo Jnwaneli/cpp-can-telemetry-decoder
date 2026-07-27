@@ -18,6 +18,7 @@
 #include "frame_source.hpp"
 #include "parser_state.hpp"
 #include "telemetry_decoder.hpp"
+#include "waveshare_serial_frame_source.hpp"
 
 void print_parser_state(ParserState state) {
     std::cout << "Parser State: "
@@ -321,7 +322,8 @@ std::vector<FrameReport> process_buffered_frames(CircularBuffer& rx_buffer,
 std::vector<FrameReport> process_live_frames(FrameSource& source,
                                              CanDispatcher& dispatcher,
                                              DecoderStats& stats,
-                                             FaultAnalyzer& fault_summary_tracker) {
+                                             FaultAnalyzer& fault_summary_tracker,
+                                             std::size_t max_frames = 0) {
     std::cout << "Processing CAN frames in live-style mode:" << std::endl;
 
     std::vector<FrameReport> reports;
@@ -334,6 +336,13 @@ std::vector<FrameReport> process_live_frames(FrameSource& source,
 
         reports.push_back(report);
         frame_number++;
+
+        if (max_frames != 0 && reports.size() >= max_frames) {
+            std::cout << "Reached live frame limit: "
+                      << max_frames
+                      << std::endl;
+            break;
+        }
     }
 
     std::cout << "------------------------------" << std::endl;
@@ -381,14 +390,14 @@ void run_decoder_pipeline(const std::vector<CanFrame>& can_log) {
     print_summary_report(reports, stats, fault_summary_tracker);
 }
 
-void run_decoder_live(FrameSource& source) {
+void run_decoder_live(FrameSource& source, std::size_t max_frames = 0) {
     TelemetryDecoder decoder;
     CanDispatcher dispatcher(decoder);
     DecoderStats stats;
     FaultAnalyzer fault_summary_tracker;
 
     std::vector<FrameReport> reports =
-        process_live_frames(source, dispatcher, stats, fault_summary_tracker);
+        process_live_frames(source, dispatcher, stats, fault_summary_tracker, max_frames);
 
     std::cout << "Decoder frames seen: "
               << decoder.frames_seen()
@@ -399,21 +408,93 @@ void run_decoder_live(FrameSource& source) {
     print_summary_report(reports, stats, fault_summary_tracker);
 }
 
-int main() {
-    CsvFrameSource source("data/sample_can_log.csv");
+void print_usage(const std::string& program_name) {
+    std::cout << "Usage:" << std::endl;
+    std::cout << "  " << program_name << std::endl;
+    std::cout << "  " << program_name << " --csv <path>" << std::endl;
+    std::cout << "  " << program_name << " --waveshare-serial <COM_PORT> [max_frames]" << std::endl;
+    std::cout << std::endl;
 
-    if (!source.is_open()) {
-        std::cout << "Using fallback built-in CAN log."
-                  << std::endl
-                  << std::endl;
+    std::cout << "Examples:" << std::endl;
+    std::cout << "  " << program_name << " --csv data/sample_can_log.csv" << std::endl;
+    std::cout << "  " << program_name << " --waveshare-serial COM4 100" << std::endl;
+}
 
-        std::vector<CanFrame> fallback_log = create_fallback_can_log();
-        run_decoder_pipeline(fallback_log);
+int main(int argc, char* argv[]) {
+    if (argc == 1) {
+        CsvFrameSource source("data/sample_can_log.csv");
 
+        if (!source.is_open()) {
+            std::cout << "Using fallback built-in CAN log."
+                      << std::endl
+                      << std::endl;
+
+            std::vector<CanFrame> fallback_log = create_fallback_can_log();
+            run_decoder_pipeline(fallback_log);
+
+            return 0;
+        }
+
+        run_decoder_live(source);
         return 0;
     }
 
-    run_decoder_live(source);
+    std::string mode = argv[1];
 
-    return 0;
+    if (mode == "--help" || mode == "-h") {
+        print_usage(argv[0]);
+        return 0;
+    }
+
+    if (mode == "--csv") {
+        std::string path = "data/sample_can_log.csv";
+
+        if (argc >= 3) {
+            path = argv[2];
+        }
+
+        CsvFrameSource source(path);
+
+        if (!source.is_open()) {
+            std::cout << "CSV source could not be opened." << std::endl;
+            return 1;
+        }
+
+        run_decoder_live(source);
+        return 0;
+    }
+
+    if (mode == "--waveshare-serial") {
+        if (argc < 3) {
+            std::cout << "Missing COM port." << std::endl;
+            print_usage(argv[0]);
+            return 1;
+        }
+
+        std::string port_name = argv[2];
+        std::size_t max_frames = 100;
+
+        if (argc >= 4) {
+            max_frames = static_cast<std::size_t>(std::stoull(argv[3]));
+        }
+
+        WaveshareSerialFrameSource source(port_name);
+
+        if (!source.is_open()) {
+            std::cout << "Waveshare serial source could not be opened." << std::endl;
+            return 1;
+        }
+
+        run_decoder_live(source, max_frames);
+        return 0;
+    }
+
+    std::cout << "Unknown mode: "
+              << mode
+              << std::endl
+              << std::endl;
+
+    print_usage(argv[0]);
+
+    return 1;
 }
