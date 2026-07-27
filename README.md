@@ -96,6 +96,12 @@ TelemetryDecoder
 FaultAnalyzer
 ```
 
+A full Mermaid software/data-flow diagram is available in:
+
+```text
+docs/software_data_flow.md
+```
+
 ---
 
 ## Project Structure
@@ -158,6 +164,7 @@ cpp-can-telemetry-decoder/
 │   ├── can_debug_checklist.md
 │   ├── usb_can_capture_notes.md
 │   ├── real_time_cpp_ingestion.md
+│   ├── software_data_flow.md
 │   └── live_waveshare_test_day4.md
 │
 ├── embedded/
