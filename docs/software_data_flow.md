@@ -1,8 +1,12 @@
 # Software Data Flow
 
-This diagram shows how CAN frames move through the full C++/STM32 telemetry system.
+This document shows how CAN frames move through the full C++/STM32 telemetry system.
 
-The same desktop decoder pipeline is used for both CSV logs and live Waveshare USB-CAN input. The input backend changes, but the decoded `CanFrame` objects flow through the same validation, dispatch, decoding, statistics, and fault-analysis path.
+The same desktop decoder pipeline is used for both CSV logs and live Waveshare USB-CAN input. The input backend changes, but every received frame is normalized into a `CanFrame` before validation, dispatch, decoding, statistics tracking, and fault analysis.
+
+---
+
+## Full System Flow
 
 ```mermaid
 flowchart TD
@@ -55,11 +59,14 @@ flowchart TD
     Z --> AA[FrameReport]
     Z --> AB[DecoderStats]
     Z --> AC[Terminal Summary]
-    Z --> AD[fault_summary.json - Week 9 Day 5]
-    AD --> AE[AI Diagnostic Report - Week 9 Day 6]
+    Z --> AD[output/fault_summary.json]
+    AD --> AE[Diagnostic Report Agent]
+    AE --> AF[output/diagnostic_report.md]
 ```
 
-## Current Implemented Path
+---
+
+## Live Hardware Path
 
 ```text
 STM32 FreeRTOS sender
@@ -67,6 +74,8 @@ STM32 FreeRTOS sender
 SN65HVD230 CAN transceiver
         ↓
 Waveshare USB-CAN adapter
+        ↓
+Windows COM port
         ↓
 WaveshareSerialFrameSource
         ↓
@@ -83,7 +92,15 @@ TelemetryDecoder
 FaultAnalyzer
         ↓
 terminal summary
+        ↓
+output/fault_summary.json
+        ↓
+Diagnostic report agent
+        ↓
+output/diagnostic_report.md
 ```
+
+---
 
 ## CSV Path
 
@@ -103,14 +120,26 @@ CanDispatcher
 TelemetryDecoder
         ↓
 FaultAnalyzer
+        ↓
+terminal summary
+        ↓
+output/fault_summary.json
+        ↓
+Diagnostic report agent
+        ↓
+output/diagnostic_report.md
 ```
 
-## Next Week 9 Steps
+---
+
+## Implemented Backends
 
 ```text
-Day 5: Generate output/fault_summary.json
-Day 6: Generate output/diagnostic_report.md using the AI diagnostic assistant
+CsvFrameSource: reads project CSV CAN logs
+WaveshareSerialFrameSource: reads live Waveshare USB-CAN serial packets on Windows
 ```
+
+---
 
 ## Future Work
 
