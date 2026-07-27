@@ -6,7 +6,7 @@ This firmware runs on the STM32 NUCLEO-G431RB and transmits simulated telemetry 
 
 The firmware generates live simulated sensor values, passes them through a FreeRTOS queue, stores the latest processed telemetry in a mutex-protected shared state, and transmits CAN frames through the STM32 FDCAN peripheral.
 
-The desktop C++ project can now receive these hardware-generated frames directly through the Waveshare USB-CAN serial workflow using `WaveshareSerialFrameSource`.
+The desktop C++ project receives these hardware-generated frames directly through the Waveshare USB-CAN serial workflow using `WaveshareSerialFrameSource`.
 
 ---
 
@@ -23,6 +23,9 @@ SN65HVD230 CAN bridge: working
 Waveshare USB-CAN receive: working
 Multi-frame CAN transmit: working
 Desktop C++ live Waveshare ingestion: working
+2,000-frame live desktop decode test: passed
+Demo screenshots: committed in /media
+Muted demo videos: committed in /media
 ```
 
 The firmware successfully transmits the following standard CAN IDs:
@@ -330,6 +333,41 @@ Faults: 0
 Warnings: 0
 Dropped frames: 0
 ```
+
+Validated 2,000-frame live result:
+
+```text
+Frames processed: 2000
+Valid frames: 2000
+Unknown IDs: 0
+Invalid DLC: 0
+Faults: 0
+Warnings: 0
+Dropped frames: 0
+```
+
+Because the firmware sends four frame types per transmit cycle, the 2,000-frame test represents 500 telemetry cycles.
+
+```text
+2000 total frames / 4 frame types = 500 telemetry cycles
+```
+
+---
+
+## Demo Media
+
+The root project README includes the current screenshots and muted demo video links.
+
+Relevant media files:
+
+```text
+media/live_decoder_summary.png
+media/waveshare_receive.png
+media/decoder_demo.mp4
+media/waveshare_demo.mp4
+```
+
+The MP4 demo videos are intentionally muted. GitHub may show a large-file preview message when opening committed MP4 files directly, so the root README links to the raw files on the `main` branch.
 
 ---
 
