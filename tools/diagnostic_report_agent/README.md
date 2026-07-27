@@ -14,13 +14,13 @@ and generates a human-readable diagnostic report at:
 output/diagnostic_report.md
 ```
 
-The C++ decoder performs deterministic parsing and fault detection. The AI assistant only explains the structured fault summary.
+The C++ decoder performs deterministic parsing and fault detection. The diagnostic report agent only explains the structured fault summary.
 
 ---
 
 ## Purpose
 
-The diagnostic report agent is the final Week 9 layer of the C++ CAN Telemetry Decoder and Fault Analyzer project.
+The diagnostic report agent is the explanation layer for the C++ CAN Telemetry Decoder and Fault Analyzer project.
 
 It converts machine-readable fault data into a readable engineering report with:
 
@@ -96,6 +96,12 @@ From the repository root:
 python tools\diagnostic_report_agent\generate_report.py
 ```
 
+If `python` is not recognized, use:
+
+```powershell
+py tools\diagnostic_report_agent\generate_report.py
+```
+
 Expected terminal output:
 
 ```text
@@ -152,7 +158,7 @@ The C++ decoder performs deterministic parsing and fault detection. The AI assis
 
 - Save this report as evidence of a clean live or logged decoder run.
 - Use the same workflow with injected fault data to demonstrate fault-report behavior.
-- Continue to the final Week 9 polish step: connect this report generator to the README/demo documentation.
+- Reference this report in project documentation or demos as proof of the full diagnostic pipeline.
 ```
 
 ---
