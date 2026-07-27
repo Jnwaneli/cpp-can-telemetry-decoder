@@ -8,7 +8,7 @@ The desktop C++ application validates CAN message IDs and DLC values, decodes li
 
 The project also includes an STM32 FreeRTOS CAN telemetry sender that generates simulated live telemetry values and transmits CAN frames through an SN65HVD230 CAN transceiver to a Waveshare USB-CAN adapter.
 
-The Week 9 upgrade adds a `FrameSource` input architecture, direct Waveshare USB-CAN live serial ingestion on Windows, structured JSON output, and a diagnostic report agent that explains the C++ decoder's fault summary.
+The current implementation includes a `FrameSource` input architecture, CSV log input, direct Waveshare USB-CAN live serial ingestion on Windows, structured JSON output, and a diagnostic report agent that explains the C++ decoder's fault summary.
 
 The C++ decoder performs deterministic parsing and fault detection. The diagnostic report agent only explains the structured fault summary.
 
@@ -46,18 +46,18 @@ The tested hardware wiring connects the STM32 NUCLEO-G431RB to the Waveshare USB
 Key wiring notes:
 
 ```text
-PA12 / FDCAN1_TX → SN65HVD230 TXD
-PA11 / FDCAN1_RX ← SN65HVD230 RXD
-NUCLEO 3.3V      → SN65HVD230 VCC
-NUCLEO GND       → SN65HVD230 GND
-SN65HVD230 CANH  → Waveshare CANH
-SN65HVD230 CANL  → Waveshare CANL
-SN65HVD230 GND   → Waveshare GND
+PA12 / FDCAN1_TX -> SN65HVD230 TXD
+PA11 / FDCAN1_RX <- SN65HVD230 RXD
+NUCLEO 3.3V      -> SN65HVD230 VCC
+NUCLEO GND       -> SN65HVD230 GND
+SN65HVD230 CANH  -> Waveshare CANH
+SN65HVD230 CANL  -> Waveshare CANL
+SN65HVD230 GND   -> Waveshare GND
 ```
 
 The STM32 FDCAN pins do not connect directly to CANH and CANL. The SN65HVD230 transceiver converts STM32 logic-level CAN signals into physical CAN bus signals.
 
-The CAN bus uses Classic CAN at 500 kbps with standard 11-bit identifiers and 8-byte DLC frames. CANH-to-CANL measured about 60 Ω with power off, confirming two active 120 Ω terminations in parallel.
+The CAN bus uses Classic CAN at 500 kbps with standard 11-bit identifiers and 8-byte DLC frames. CANH-to-CANL measured about 60 ohms with power off, confirming two active 120 ohm terminations in parallel.
 
 ---
 
@@ -273,7 +273,8 @@ cpp-can-telemetry-decoder/
 │   ├── real_time_cpp_ingestion.md
 │   ├── software_data_flow.md
 │   ├── fault_summary_json.md
-│   └── live_waveshare_test_day4.md
+│   ├── live_waveshare_test.md
+│   └── freertos_live_capture_test.md
 │
 ├── media/
 │   ├── freertos_can_hardware_wiring.png
@@ -428,7 +429,7 @@ Close the Waveshare receive software before running this mode because the C++ ap
 Find the adapter in Windows Device Manager:
 
 ```text
-Device Manager → Ports (COM & LPT) → USB-SERIAL / CH340 / Waveshare adapter
+Device Manager -> Ports (COM & LPT) -> USB-SERIAL / CH340 / Waveshare adapter
 ```
 
 Then run:
@@ -477,7 +478,7 @@ The clean live run should show:
 
 ## End-to-End Diagnostic Report Pipeline
 
-This is the full Week 9 Day 6 flow from live C++ decoding to the generated diagnostic report.
+This is the full flow from live C++ decoding to the generated diagnostic report.
 
 ### 1. Start from the repository root
 
@@ -700,7 +701,7 @@ Muted live demo videos
 
 ---
 
-## Planned / Future Work
+## Future Work
 
 ```text
 Linux SocketCAN support
