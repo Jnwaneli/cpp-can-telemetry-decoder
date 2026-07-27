@@ -3,8 +3,8 @@
 ## Overview
 
 - Source: `waveshare_live`
-- Frames processed: 200
-- Valid frames: 200
+- Frames processed: 2000
+- Valid frames: 2000
 - Faults: 0
 - Warnings: 0
 
@@ -34,4 +34,4 @@ The C++ decoder performs deterministic parsing and fault detection. The AI assis
 
 - Save this report as evidence of a clean live or logged decoder run.
 - Use the same workflow with injected fault data to demonstrate fault-report behavior.
-- Continue to the final Week 9 polish step: connect this report generator to the README/demo documentation.
+- Reference this report in project documentation or demos as proof of the full diagnostic pipeline.
