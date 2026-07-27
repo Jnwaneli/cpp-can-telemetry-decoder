@@ -1,40 +1,28 @@
 # USB-CAN Capture Notes
 
-This document records the USB-CAN capture status for the STM32 CAN telemetry project.
+This document records the USB-CAN capture and live-ingestion status for the STM32 CAN telemetry project.
 
 ---
 
-## Capture Status
-
-Current status:
+## Current Status
 
 ```text
-Hardware capture confirmed.
+Hardware CAN transmit path: working
+Waveshare USB-CAN receive software: working
+Desktop C++ live serial backend: working on Windows
+CSV capture path: available
+Structured JSON output: working
+Diagnostic report generation: working after JSON generation
 ```
 
-The STM32 NUCLEO successfully transmitted CAN traffic through the SN65HVD230 CAN transceiver to the Waveshare USB-CAN adapter.
+The STM32 NUCLEO successfully transmits CAN traffic through the SN65HVD230 CAN transceiver to the Waveshare USB-CAN adapter.
 
-The PC received the transmitted CAN frame using the Waveshare USB-CAN software/tool.
-
----
-
-## Confirmed Hardware Frame
-
-The first confirmed hardware transmit frame was:
+The PC can observe the traffic using either:
 
 ```text
-ID: 0x100
-DLC: 8
-Data: 00 08 10 00 FF 0A 07 01
+Waveshare USB-CAN receive software
+Desktop C++ live reader through WaveshareSerialFrameSource
 ```
-
-Transmit period:
-
-```text
-100 ms
-```
-
-This confirms that the basic hardware path works.
 
 ---
 
@@ -67,63 +55,100 @@ Frame type: Standard CAN
 CAN format: Classic CAN
 Bitrate: 500 kbps
 Receive: enabled
-Received ID: 0x100
 ```
 
 ---
 
-## Received Frame Meaning
+## Confirmed CAN IDs
 
-Payload:
+The STM32 FreeRTOS sender transmits all four supported CAN IDs:
 
 ```text
-00 08 10 00 FF 0A 07 01
+0x100 Analog Inputs
+0x101 Battery and Temperature
+0x102 Status Flags
+0x200 Vehicle Telemetry
 ```
 
-Decoded meaning:
+All frames use:
 
 ```text
-AIN1_RAW = 2048
-AIN2_RAW = 16
-AIN3_RAW = 2815
-Status = 0x07
-Counter = 1
-```
-
-Status byte:
-
-```text
-0x07 = 0000 0111
-```
-
-Meaning:
-
-```text
-Sensor 1 valid
-Sensor 2 valid
-Sensor 3 valid
+DLC: 8 bytes
+Classic CAN
+Standard 11-bit ID
 ```
 
 ---
 
-## Decoder Integration Note
+## Desktop Live Reader Command
 
-The hardware currently confirms transmission of CAN ID `0x100`.
+Close the Waveshare receive software before running the C++ live serial backend because only one program can own the COM port at a time.
 
-For full decoder integration testing, `data/sample_can_log.csv` includes captured-style `0x100` frame data plus additional test frames for:
-
-```text
-0x101 battery and temperature decoding
-0x102 status frame decoding
-unknown ID fault testing
-invalid DLC fault testing
+```powershell
+.\main.exe --waveshare-serial COM4 2000
 ```
 
-This allows the desktop decoder to test the full validation, decoding, fault analysis, and statistics pipeline.
+Replace `COM4` with the actual COM port assigned to the adapter.
 
 ---
 
-## Debug Result
+## Live Decoder Result
+
+The desktop decoder successfully processed 2,000 live STM32-generated CAN frames through the Waveshare serial backend.
+
+```text
+Frames processed: 2000
+Valid frames: 2000
+Unknown IDs: 0
+Invalid DLC: 0
+Faults: 0
+Warnings: 0
+Dropped frames: 0
+```
+
+Because the firmware transmits four frame types per transmit cycle, the run represents 500 telemetry cycles.
+
+```text
+2000 total frames / 4 frame types = 500 telemetry cycles
+```
+
+---
+
+## CSV Capture Path
+
+A short captured FreeRTOS log is also available:
+
+```text
+data/freertos_captured_log.csv
+```
+
+This file can be processed with:
+
+```powershell
+.\main.exe --csv data\freertos_captured_log.csv
+```
+
+The CSV path is useful for repeatable tests when the hardware is not connected.
+
+---
+
+## Generated Outputs
+
+After a decoder run, the C++ application writes:
+
+```text
+output/fault_summary.json
+```
+
+The diagnostic report agent reads that JSON file and writes:
+
+```text
+output/diagnostic_report.md
+```
+
+---
+
+## Debug Checklist Used
 
 The hardware CAN bridge worked after checking the core CAN requirements:
 
@@ -135,15 +160,4 @@ common ground
 3.3 V transceiver power
 termination across CANH/CANL
 Waveshare receive mode
-```
-
----
-
-## Current Status Summary
-
-```text
-Hardware CAN transmit path: working
-Waveshare USB-CAN receive: working
-Desktop decoder log integration: using sample_can_log.csv
-Next step: feed captured or captured-style frames into the C++ decoder
 ```
