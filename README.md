@@ -59,20 +59,25 @@ Because the STM32 firmware transmits four CAN frame types per transmit cycle, th
 2000 total frames / 4 frame types = 500 telemetry cycles
 ```
 
-Short demo videos were captured for:
+## Demo Screenshots
 
-```text
-1. Waveshare USB-CAN receive workflow
-2. C++ live decoder 2,000-frame run
-```
+### C++ Live Decoder 2,000-Frame Summary
 
-The raw MP4 files are not committed directly to keep the repository lightweight. They should be uploaded through GitHub's web UI and linked here.
+The desktop C++ decoder processed 2,000 live STM32-generated CAN frames through the Waveshare live input path with no unknown IDs, invalid DLC errors, dropped-frame faults, diagnostic faults, or warnings.
 
-Video upload placeholder:
+<img src="./media/live_decoder_summary.png" alt="C++ live decoder summary showing 2,000 valid CAN frames" width="900">
 
-```text
-https://github.com/Jnwaneli/cpp-can-telemetry-decoder/issues/1
-```
+### Waveshare USB-CAN Receive Software
+
+The Waveshare USB-CAN software confirmed live CAN traffic from the STM32 FreeRTOS telemetry sender at 500 kbps.
+
+<img src="./media/waveshare_receive.png" alt="Waveshare USB-CAN software receiving live CAN frames" width="900">
+
+## Video Proof
+
+Short demo videos were recorded for the Waveshare receive workflow and the C++ 2,000-frame live decoder run, but the raw MP4 files are not committed directly to keep the repository lightweight.
+
+Video links will be added after the MP4 files are compressed and uploaded successfully through GitHub's web UI.
 
 Suggested demo caption:
 
@@ -224,6 +229,10 @@ cpp-can-telemetry-decoder/
 │   ├── real_time_cpp_ingestion.md
 │   ├── software_data_flow.md
 │   └── live_waveshare_test_day4.md
+│
+├── media/
+│   ├── live_decoder_summary.png
+│   └── waveshare_receive.png
 │
 ├── embedded/
 │   └── can_hardware_bridge/
