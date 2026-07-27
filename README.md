@@ -33,6 +33,40 @@ AI diagnostic assistant: Week 9 Day 6
 
 ---
 
+## Hardware Wiring Schematic
+
+The tested hardware wiring connects the STM32 NUCLEO-G431RB to the Waveshare USB-CAN adapter through an SN65HVD230 CAN transceiver.
+
+```text
+NUCLEO-G431RB
+        ↓ FDCAN1_TX / FDCAN1_RX
+SN65HVD230 CAN transceiver
+        ↓ CANH / CANL
+Waveshare USB-CAN adapter
+        ↓ USB
+PC / C++ decoder
+```
+
+<img src="./media/freertos_can_hardware_wiring.svg?cache=hardware-schematic-final" alt="STM32 FreeRTOS CAN hardware wiring schematic" width="900">
+
+Key wiring notes:
+
+```text
+PA12 / FDCAN1_TX → SN65HVD230 TXD
+PA11 / FDCAN1_RX ← SN65HVD230 RXD
+NUCLEO 3.3V      → SN65HVD230 VCC
+NUCLEO GND       → SN65HVD230 GND
+SN65HVD230 CANH  → Waveshare CANH
+SN65HVD230 CANL  → Waveshare CANL
+SN65HVD230 GND   → Waveshare GND
+```
+
+The STM32 FDCAN pins do not connect directly to CANH and CANL. The SN65HVD230 transceiver converts STM32 logic-level CAN signals into physical CAN bus signals.
+
+The CAN bus uses Classic CAN at 500 kbps with standard 11-bit identifiers and 8-byte DLC frames. CANH-to-CANL measured about 60 Ω with power off, confirming two active 120 Ω terminations in parallel.
+
+---
+
 ## Live Demo Proof
 
 The project was validated using direct live CAN ingestion from the Waveshare USB-CAN adapter into the C++ decoder.
@@ -175,6 +209,7 @@ CounterTracker dropped-frame detection
 StuckSensorTracker warning logic
 STM32 FreeRTOS CAN telemetry sender
 Direct hardware-generated CAN ingestion through Waveshare USB-CAN
+Hardware wiring schematic preview
 Committed live-demo screenshots
 Committed muted live-demo videos
 ```
@@ -245,6 +280,7 @@ cpp-can-telemetry-decoder/
 │   └── live_waveshare_test_day4.md
 │
 ├── media/
+│   ├── freertos_can_hardware_wiring.svg
 │   ├── live_decoder_summary.png
 │   ├── waveshare_receive.png
 │   ├── decoder_demo.mp4
@@ -491,6 +527,7 @@ Possible stuck sensor warning
 STM32 FreeRTOS telemetry sender
 FreeRTOS queue and mutex architecture
 Direct Waveshare USB-CAN live ingestion on Windows
+Hardware wiring schematic preview
 Live demo screenshots
 Muted live demo videos
 ```
