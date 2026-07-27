@@ -24,6 +24,8 @@ WaveshareSerialFrameSource backend: working on Windows
 STM32 FreeRTOS CAN sender: working
 SN65HVD230 CAN transceiver path: tested
 Waveshare USB-CAN live ingestion: tested
+Demo screenshots: committed
+Muted demo videos: committed
 SocketCAN can0 backend: future work
 fault_summary.json output: Week 9 Day 5
 AI diagnostic assistant: Week 9 Day 6
@@ -67,27 +69,27 @@ Because the STM32 firmware transmits four CAN frame types per transmit cycle, th
 
 The desktop C++ decoder processed 2,000 live STM32-generated CAN frames through the Waveshare live input path with no unknown IDs, invalid DLC errors, dropped-frame faults, diagnostic faults, or warnings.
 
-<img src="./media/live_decoder_summary.png?cache=21839a82" alt="C++ live decoder summary showing 2,000 valid CAN frames" width="900">
+<img src="./media/live_decoder_summary.png?cache=live-demo-final" alt="C++ live decoder summary showing 2,000 valid CAN frames" width="900">
 
 ### Waveshare USB-CAN Receive Software
 
 The Waveshare USB-CAN software confirmed live CAN traffic from the STM32 FreeRTOS telemetry sender at 500 kbps.
 
-<img src="./media/waveshare_receive.png?cache=e9549c9d" alt="Waveshare USB-CAN software receiving live CAN frames" width="900">
+<img src="./media/waveshare_receive.png?cache=receive-final" alt="Waveshare USB-CAN software receiving live CAN frames" width="900">
 
 ---
 
 ## Demo Videos
 
-GitHub may show a "file is too big" preview message when opening committed MP4 files directly. The links below point to the raw video files from the demo-video commit.
+The demo videos are intentionally muted. GitHub may show a large-file preview message when opening committed MP4 files directly, so the links below point to the current raw files on the `main` branch.
 
 ### Decoder Live Ingestion Demo
 
-[Watch or download the decoder live-ingestion demo](https://github.com/Jnwaneli/cpp-can-telemetry-decoder/raw/main/media/decoder_demo.mp4?cache=muted)
+[Watch or download the muted decoder live-ingestion demo](https://github.com/Jnwaneli/cpp-can-telemetry-decoder/raw/main/media/decoder_demo.mp4?cache=muted-final)
 
 ### Waveshare Receive Demo
 
-[Watch or download the Waveshare receive demo](https://github.com/Jnwaneli/cpp-can-telemetry-decoder/raw/main/media/waveshare_demo.mp4?cache=muted)
+[Watch or download the muted Waveshare receive demo](https://github.com/Jnwaneli/cpp-can-telemetry-decoder/raw/main/media/waveshare_demo.mp4?cache=muted-final)
 
 Suggested demo caption:
 
@@ -173,6 +175,8 @@ CounterTracker dropped-frame detection
 StuckSensorTracker warning logic
 STM32 FreeRTOS CAN telemetry sender
 Direct hardware-generated CAN ingestion through Waveshare USB-CAN
+Committed live-demo screenshots
+Committed muted live-demo videos
 ```
 
 ---
@@ -487,6 +491,8 @@ Possible stuck sensor warning
 STM32 FreeRTOS telemetry sender
 FreeRTOS queue and mutex architecture
 Direct Waveshare USB-CAN live ingestion on Windows
+Live demo screenshots
+Muted live demo videos
 ```
 
 ---
