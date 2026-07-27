@@ -8,7 +8,9 @@ The desktop C++ application validates CAN message IDs and DLC values, decodes li
 
 The project also includes an STM32 FreeRTOS CAN telemetry sender that generates simulated live telemetry values and transmits CAN frames through an SN65HVD230 CAN transceiver to a Waveshare USB-CAN adapter.
 
-The Week 9 upgrade adds a `FrameSource` input architecture and a direct Waveshare serial live reader on Windows. The C++ application can open the Waveshare COM port, receive hardware-generated CAN frames, convert them into `CanFrame` objects, and feed them through the same dispatcher, decoder, and fault analyzer used by CSV mode.
+The Week 9 upgrade adds a `FrameSource` input architecture, direct Waveshare USB-CAN live serial ingestion on Windows, structured JSON output, and a diagnostic report agent that explains the C++ decoder's fault summary.
+
+The C++ decoder performs deterministic parsing and fault detection. The diagnostic report agent only explains the structured fault summary.
 
 ---
 
@@ -24,11 +26,11 @@ WaveshareSerialFrameSource backend: working on Windows
 STM32 FreeRTOS CAN sender: working
 SN65HVD230 CAN transceiver path: tested
 Waveshare USB-CAN live ingestion: tested
+fault_summary.json output: working
+Diagnostic report agent: working after fault_summary.json is generated
 Demo screenshots: committed
 Muted demo videos: committed
 SocketCAN can0 backend: future work
-fault_summary.json output: Week 9 Day 5
-AI diagnostic assistant: Week 9 Day 6
 ```
 
 ---
@@ -105,7 +107,7 @@ The Waveshare USB-CAN software confirmed live CAN traffic from the STM32 FreeRTO
 
 <img src="./media/waveshare_receive.png?cache=receive-final" alt="Waveshare USB-CAN software receiving live CAN frames" width="900">
 
-**Figure 3. Waveshare USB-CAN receive software.** The receive window confirms that the STM32 FreeRTOS sender is transmitting live CAN frames through the SN65HVD230 transceiver into the Waveshare USB-CAN adapter.\
+**Figure 3. Waveshare USB-CAN receive software.** The receive window confirms that the STM32 FreeRTOS sender is transmitting live CAN frames through the SN65HVD230 transceiver into the Waveshare USB-CAN adapter.
 
 ### Physical Hardware Test Setup
 
@@ -194,35 +196,12 @@ flowchart TD
     Z --> AA[FrameReport]
     Z --> AB[DecoderStats]
     Z --> AC[Terminal Summary]
-    Z --> AD[fault_summary.json - Week 9 Day 5]
-    AD --> AE[AI Diagnostic Report - Week 9 Day 6]
+    Z --> AD[output/fault_summary.json]
+    AD --> AE[Diagnostic Report Agent]
+    AE --> AF[output/diagnostic_report.md]
 ```
 
-**Figure 5. Software and data flow diagram.** Live hardware frames and CSV log frames are normalized into `CanFrame` objects before passing through the same validation, dispatch, decoding, statistics, counter tracking, and fault-analysis pipeline.
-
----
-
-## Key Features
-
-```text
-CanFrame common frame representation
-FrameSource input interface
-CsvFrameSource log backend
-WaveshareSerialFrameSource live serial backend
-CSV CAN log parser
-CAN frame validation
-CANDispatcher routing by CAN ID
-TelemetryDecoder for supported message IDs
-FaultAnalyzer summary tracking
-SignalStats min/max/average tracking
-CounterTracker dropped-frame detection
-StuckSensorTracker warning logic
-STM32 FreeRTOS CAN telemetry sender
-Direct hardware-generated CAN ingestion through Waveshare USB-CAN
-Hardware wiring schematic preview
-Committed live-demo screenshots
-Committed muted live-demo videos
-```
+**Figure 5. Software and data flow diagram.** Live hardware frames and CSV log frames are normalized into `CanFrame` objects before passing through the same validation, dispatch, decoding, statistics, counter tracking, and fault-analysis pipeline. The structured JSON summary then feeds the diagnostic report agent.
 
 ---
 
@@ -243,6 +222,7 @@ cpp-can-telemetry-decoder/
 │   ├── frame_source.hpp
 │   ├── csv_frame_source.hpp
 │   ├── waveshare_serial_frame_source.hpp
+│   ├── fault_summary_writer.hpp
 │   ├── telemetry_decoder.hpp
 │   ├── telemetry_data.hpp
 │   ├── fault_analyzer.hpp
@@ -261,6 +241,7 @@ cpp-can-telemetry-decoder/
 │   ├── circular_buffer.cpp
 │   ├── csv_frame_source.cpp
 │   ├── waveshare_serial_frame_source.cpp
+│   ├── fault_summary_writer.cpp
 │   ├── telemetry_decoder.cpp
 │   ├── fault_analyzer.cpp
 │   ├── decoder_stats.cpp
@@ -276,6 +257,10 @@ cpp-can-telemetry-decoder/
 │   ├── stuck_sensor_test.csv
 │   └── freertos_captured_log.csv
 │
+├── output/
+│   ├── fault_summary.json
+│   └── diagnostic_report.md
+│
 ├── docs/
 │   ├── protocol.md
 │   ├── fault_rules.md
@@ -287,10 +272,12 @@ cpp-can-telemetry-decoder/
 │   ├── usb_can_capture_notes.md
 │   ├── real_time_cpp_ingestion.md
 │   ├── software_data_flow.md
+│   ├── fault_summary_json.md
 │   └── live_waveshare_test_day4.md
 │
 ├── media/
 │   ├── freertos_can_hardware_wiring.png
+│   ├── physical_hardware_setup.jpg
 │   ├── live_decoder_summary.png
 │   ├── waveshare_receive.png
 │   ├── decoder_demo.mp4
@@ -304,7 +291,11 @@ cpp-can-telemetry-decoder/
 │           └── README.md
 │
 └── tools/
-    └── diagnostic_report_agent/        # Week 9 Day 6
+    └── diagnostic_report_agent/
+        ├── README.md
+        ├── generate_report.py
+        ├── sample_fault_summary.json
+        └── sample_report.md
 ```
 
 ---
@@ -374,6 +365,7 @@ C++17-compatible compiler
 PowerShell or terminal
 g++ or another compatible C++ compiler
 Windows for direct Waveshare serial mode
+Python 3 for the diagnostic report agent
 ```
 
 ### Build on Windows with g++
@@ -381,7 +373,7 @@ Windows for direct Waveshare serial mode
 From the repository root:
 
 ```powershell
-g++ -std=c++17 -Wall -Wextra -Iinclude main.cpp src/circular_buffer.cpp src/telemetry_decoder.cpp src/bit_utils.cpp src/fault_analyzer.cpp src/decoder_stats.cpp src/can_dispatcher.cpp src/can_log_parser.cpp src/csv_frame_source.cpp src/waveshare_serial_frame_source.cpp src/signal_stats.cpp src/counter_tracker.cpp src/stuck_sensor_tracker.cpp -o main
+g++ -std=c++17 -Wall -Wextra -Iinclude main.cpp src/circular_buffer.cpp src/telemetry_decoder.cpp src/bit_utils.cpp src/fault_analyzer.cpp src/decoder_stats.cpp src/can_dispatcher.cpp src/can_log_parser.cpp src/csv_frame_source.cpp src/waveshare_serial_frame_source.cpp src/fault_summary_writer.cpp src/signal_stats.cpp src/counter_tracker.cpp src/stuck_sensor_tracker.cpp -o main
 ```
 
 ---
@@ -406,6 +398,12 @@ Invalid DLC: 1
 Faults: 3
 Warnings: 0
 Dropped frames: 1
+```
+
+After the run finishes, the decoder writes:
+
+```text
+output/fault_summary.json
 ```
 
 ### CSV Mode with a Specific File
@@ -446,6 +444,155 @@ The final argument is the frame limit. For example, this command reads and decod
 ```powershell
 ./main.exe --waveshare-serial COM4 2000
 ```
+
+After a successful live run, the decoder writes:
+
+```text
+output/fault_summary.json
+```
+
+The clean live run should show:
+
+```json
+{
+  "source": "waveshare_live",
+  "frames_processed": 2000,
+  "valid_frames": 2000,
+  "invalid_dlc": 0,
+  "unknown_ids": 0,
+  "faults": 0,
+  "warnings": 0,
+  "low_voltage_faults": 0,
+  "high_voltage_faults": 0,
+  "voltage_faults": 0,
+  "high_temperature_faults": 0,
+  "sensor_invalid_faults": 0,
+  "dropped_frames": 0,
+  "possible_stuck_sensors": 0,
+  "other_faults": 0
+}
+```
+
+---
+
+## End-to-End Diagnostic Report Pipeline
+
+This is the full Week 9 Day 6 flow from live C++ decoding to the generated diagnostic report.
+
+### 1. Start from the repository root
+
+```powershell
+cd C:\Users\joshw\Documents\cpp-can-telemetry-decoder
+```
+
+### 2. Build the C++ decoder
+
+```powershell
+g++ -std=c++17 -Wall -Wextra -Iinclude main.cpp src/circular_buffer.cpp src/telemetry_decoder.cpp src/bit_utils.cpp src/fault_analyzer.cpp src/decoder_stats.cpp src/can_dispatcher.cpp src/can_log_parser.cpp src/csv_frame_source.cpp src/waveshare_serial_frame_source.cpp src/fault_summary_writer.cpp src/signal_stats.cpp src/counter_tracker.cpp src/stuck_sensor_tracker.cpp -o main
+```
+
+### 3. Run the decoder
+
+For the live hardware path:
+
+```powershell
+./main.exe --waveshare-serial COM4 2000
+```
+
+For a logged CSV path:
+
+```powershell
+./main.exe --csv data/sample_can_log.csv
+```
+
+The C++ decoder prints the terminal summary and writes:
+
+```text
+output/fault_summary.json
+```
+
+### 4. Check the JSON summary
+
+```powershell
+type output\fault_summary.json
+```
+
+For the live hardware run, confirm the source says:
+
+```json
+"source": "waveshare_live"
+```
+
+### 5. Run the diagnostic report agent
+
+```powershell
+python tools\diagnostic_report_agent\generate_report.py
+```
+
+If `python` is not recognized, use:
+
+```powershell
+py tools\diagnostic_report_agent\generate_report.py
+```
+
+Expected terminal output:
+
+```text
+Read fault summary: output/fault_summary.json
+Wrote diagnostic report: output/diagnostic_report.md
+```
+
+### 6. Open the generated report
+
+```powershell
+type output\diagnostic_report.md
+```
+
+The generated report contains:
+
+```text
+Overview
+Detected Faults
+Likely Causes
+Recommended Checks
+Severity Notes
+Next Steps
+```
+
+The C++ decoder performs deterministic parsing and fault detection. The diagnostic report agent only explains the structured fault summary.
+
+---
+
+## Diagnostic Report Agent
+
+The diagnostic report agent is located at:
+
+```text
+tools/diagnostic_report_agent/
+```
+
+Files:
+
+```text
+README.md
+generate_report.py
+sample_fault_summary.json
+sample_report.md
+```
+
+Input:
+
+```text
+output/fault_summary.json
+```
+
+Output:
+
+```text
+output/diagnostic_report.md
+```
+
+The agent does not decode raw CAN bytes. It does not decide whether a frame is valid. It only explains the structured summary produced by the deterministic C++ decoder.
 
 ---
 
@@ -499,6 +646,12 @@ Windows COM port
 WaveshareSerialFrameSource
         ↓
 Desktop C++ decoder
+        ↓
+output/fault_summary.json
+        ↓
+Diagnostic report agent
+        ↓
+output/diagnostic_report.md
 ```
 
 Hardware status:
@@ -534,10 +687,13 @@ StuckSensorTracker
 0x200 decoder
 Dropped counter detection
 Possible stuck sensor warning
+Structured fault_summary.json output
+Diagnostic report agent
 STM32 FreeRTOS telemetry sender
 FreeRTOS queue and mutex architecture
 Direct Waveshare USB-CAN live ingestion on Windows
-Hardware wiring schematic preview
+Hardware wiring schematic
+Physical hardware setup photo
 Live demo screenshots
 Muted live demo videos
 ```
@@ -547,8 +703,6 @@ Muted live demo videos
 ## Planned / Future Work
 
 ```text
-fault_summary.json output
-AI-assisted diagnostic report generator
 Linux SocketCAN support
 candump log parser
 live can0 input backend
@@ -567,18 +721,17 @@ production-grade serial reconnect/error recovery
 ```text
 The live Waveshare serial reader is implemented for the current Windows/Waveshare workflow.
 SocketCAN can0 support is not implemented yet.
-fault_summary.json output is planned.
-The AI diagnostic assistant is not implemented yet.
 The STM32 firmware currently generates simulated telemetry values rather than real ADC sensor values.
 Speed scaling for 0x200 is not implemented yet.
 0x102 system fault byte rules are not fully implemented yet.
 The serial backend works for the demo workflow but does not yet include production-grade reconnect/recovery behavior.
+The diagnostic report agent explains the JSON summary; it does not perform raw CAN decoding or independent fault detection.
 ```
 
 ---
 
 ## Final Project Story
 
-This project connects desktop C++ decoding, fault analysis, STM32 FreeRTOS firmware, and real CAN hardware into one end-to-end telemetry workflow.
+This project connects desktop C++ decoding, fault analysis, STM32 FreeRTOS firmware, real CAN hardware, structured JSON output, and a diagnostic report layer into one end-to-end telemetry workflow.
 
-The STM32 FreeRTOS firmware generates live simulated telemetry frames and sends them over CAN through an SN65HVD230 transceiver. The Waveshare USB-CAN adapter receives those frames, and the C++ application reads them directly through a live serial backend. Each received packet becomes a `CanFrame` and flows through the same validation, dispatcher, decoder, statistics, and fault-analysis pipeline used for CSV logs.
+The STM32 FreeRTOS firmware generates live simulated telemetry frames and sends them over CAN through an SN65HVD230 transceiver. The Waveshare USB-CAN adapter receives those frames, and the C++ application reads them directly through a live serial backend. Each received packet becomes a `CanFrame` and flows through the same validation, dispatcher, decoder, statistics, and fault-analysis pipeline used for CSV logs. The decoder then writes `output/fault_summary.json`, and the diagnostic report agent converts that structured summary into `output/diagnostic_report.md`.
