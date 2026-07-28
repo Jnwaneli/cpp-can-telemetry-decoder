@@ -121,7 +121,7 @@ The physical hardware setup shows the NUCLEO-G431RB connected to the SN65HVD230 
 
 ## Demo Videos
 
-The demo videos are intentionally muted. GitHub may show a large-file preview message when opening committed MP4 files directly, so the links below point to the current raw files on the `main` branch.
+The demo videos are intentionally muted. The Waveshare receive demo uses a GitHub attachment link so it can play directly in the README.
 
 ### Decoder Live Ingestion Demo
 
@@ -131,7 +131,7 @@ The demo videos are intentionally muted. GitHub may show a large-file preview me
 
 ### Waveshare Receive Demo
 
-[Watch or download the muted Waveshare receive demo](https://github.com/Jnwaneli/cpp-can-telemetry-decoder/raw/main/media/waveshare_demo.mp4?cache=muted-final)
+https://github.com/user-attachments/assets/6ba00dfe-b234-4819-b4a3-3b839b08babc
 
 **Video 2. Waveshare receive demo.** The Waveshare USB-CAN receive software shows live CAN traffic from the STM32 FreeRTOS telemetry sender at 500 kbps.
 
