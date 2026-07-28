@@ -121,11 +121,11 @@ The physical hardware setup shows the NUCLEO-G431RB connected to the SN65HVD230 
 
 ## Demo Videos
 
-The demo videos are intentionally muted. The Waveshare receive demo uses a GitHub attachment link so it can play directly in the README.
+The demo videos are intentionally muted and use GitHub attachment links so they can play directly in the README.
 
 ### Decoder Live Ingestion Demo
 
-[Watch or download the muted decoder live-ingestion demo](https://github.com/Jnwaneli/cpp-can-telemetry-decoder/raw/main/media/decoder_demo.mp4?cache=muted-final)
+https://github.com/user-attachments/assets/c2f1470f-7d39-4ade-a3b4-8d83233d1ad6
 
 **Video 1. Decoder live-ingestion demo.** The C++ decoder reads live Waveshare serial frames from the STM32 FreeRTOS CAN sender and processes them through the normal validation, dispatch, decode, statistics, and fault-analysis pipeline.
 
