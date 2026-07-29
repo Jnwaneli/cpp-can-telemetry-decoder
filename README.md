@@ -6,7 +6,7 @@ This project is a C++17 CAN telemetry decoder and fault analyzer for simulated, 
 
 The desktop C++ application validates CAN message IDs and DLC values, decodes little-endian payloads, extracts status flags with bit masks, tracks running signal statistics, detects faults, and prints structured diagnostic summaries.
 
-The project also includes an STM32 FreeRTOS CAN telemetry sender that generates simulated live telemetry values and transmits CAN frames through an SN65HVD230 CAN transceiver to a Waveshare USB-CAN adapter.
+The project also includes an STM32 FreeRTOS CAN telemetry sender that generates simulated live telemetry values and transmits CAN frames through an SN65HVD230 CAN transceiver to a Waveshare USB-CAN adapter. A MAX7219 LED matrix provides a button-gated visual fault display that stays synchronized with the CAN fault payloads.
 
 The current implementation includes a `FrameSource` input architecture, CSV log input, direct Waveshare USB-CAN live serial ingestion on Windows, structured JSON output, and a diagnostic report agent that explains the C++ decoder's fault summary.
 
@@ -38,15 +38,16 @@ SocketCAN can0 backend: future work
 
 ## Hardware Wiring Schematic
 
-The tested hardware wiring connects the STM32 NUCLEO-G431RB to the Waveshare USB-CAN adapter through an SN65HVD230 CAN transceiver.
+The tested hardware wiring connects the STM32 NUCLEO-G431RB to a Waveshare USB-CAN adapter through an SN65HVD230 CAN transceiver. The same setup also includes a 4-module MAX7219 LED matrix used for the button-gated visual fault demo.
 
-<img src="./media/freertos_can_hardware_wiring.png" alt="STM32 FreeRTOS CAN hardware wiring schematic" width="900">
+<img src="./media/freertos_can_hardware_wiring.png" alt="STM32 FreeRTOS CAN and MAX7219 LED hardware wiring schematic" width="900">
 
-**Figure 1. STM32 FreeRTOS CAN hardware wiring schematic.** The NUCLEO-G431RB connects to the SN65HVD230 CAN transceiver using FDCAN1_TX, FDCAN1_RX, 3.3 V, and GND. The SN65HVD230 connects to the Waveshare USB-CAN adapter through CANH, CANL, and common ground. The Waveshare adapter connects to the PC over USB for live receive testing and C++ decoder integration.
+**Figure 1. STM32 FreeRTOS CAN and MAX7219 LED fault-demo wiring schematic.** The NUCLEO-G431RB connects to the SN65HVD230 CAN transceiver using FDCAN1_TX, FDCAN1_RX, 3.3 V, and GND. The SN65HVD230 connects to the Waveshare USB-CAN adapter through CANH, CANL, and common ground. The MAX7219 LED matrix connects to the NUCLEO through 5 V, GND, PB6/D10 for DIN, PB7 for CLK, and PB8/D15 for CS/LOAD. The Waveshare adapter connects to the PC over USB for live receive testing and C++ decoder integration.
 
 Key wiring notes:
 
 ```text
+CAN path:
 PA12 / FDCAN1_TX -> SN65HVD230 TXD
 PA11 / FDCAN1_RX <- SN65HVD230 RXD
 NUCLEO 3.3V      -> SN65HVD230 VCC
@@ -54,11 +55,20 @@ NUCLEO GND       -> SN65HVD230 GND
 SN65HVD230 CANH  -> Waveshare CANH
 SN65HVD230 CANL  -> Waveshare CANL
 SN65HVD230 GND   -> Waveshare GND
+
+MAX7219 LED matrix:
+NUCLEO 5V        -> MAX7219 VCC
+NUCLEO GND       -> MAX7219 GND
+PB6 / D10        -> MAX7219 DIN
+PB7              -> MAX7219 CLK
+PB8 / D15        -> MAX7219 CS / LOAD
 ```
 
 The STM32 FDCAN pins do not connect directly to CANH and CANL. The SN65HVD230 transceiver converts STM32 logic-level CAN signals into physical CAN bus signals.
 
 The CAN bus uses Classic CAN at 500 kbps with standard 11-bit identifiers and 8-byte DLC frames. CANH-to-CANL measured about 60 ohms with power off, confirming two active 120 ohm terminations in parallel.
+
+More detailed LED wiring documentation is available in `docs/week10_led_fault_demo_wiring.md`.
 
 ---
 
@@ -150,7 +160,7 @@ https://github.com/user-attachments/assets/7c140fec-3e94-411c-a61a-abba91898925
 
 ### STM32 FreeRTOS LED Fault Demo
 
-This demo shows the STM32 FreeRTOS firmware, MAX7219 8x8 LED matrix, and C++ CAN decoder working together in real time. The NUCLEO user button starts the demo sequence. Before the button press, the LED matrix runs a scanner sweep startup animation. After the button press, the firmware cycles through demo fault modes and injects matching values into the CAN payload.
+This demo shows the STM32 FreeRTOS firmware, MAX7219 LED matrix, and C++ CAN decoder working together in real time. The NUCLEO user button starts the demo sequence. Before the button press, the LED matrix runs a scanner sweep startup animation. After the button press, the firmware cycles through demo fault modes and injects matching values into the CAN payload.
 
 The LED matrix and decoder are not directly connected to each other. Instead, both are driven by the same firmware demo mode:
 
@@ -165,12 +175,6 @@ https://github.com/user-attachments/assets/3a10cdd9-0971-4c32-9f4d-37c49d1fd2c0
 [Watch in higher quality / download original LED fault demo MP4](https://github.com/Jnwaneli/cpp-can-telemetry-decoder/raw/main/media/led_fault_demo_side_by_side.mp4?cache=led-fault-demo-final)
 
 **Video 3. Button-gated STM32 FreeRTOS LED fault demo.** The left side shows the C++ live CAN decoder processing frames from the Waveshare USB-CAN adapter. The right side shows the STM32/MAX7219 LED matrix displaying the synchronized fault state. Pressing the NUCLEO user button starts the fault demo cycle.
-
-Suggested demo caption:
-
-```text
-Live CAN test: decoded 2,000 consecutive STM32-generated CAN frames through a Waveshare USB-CAN live serial backend at 500 kbps, with 0 unknown IDs, 0 invalid DLC errors, 0 dropped-frame faults, and 0 diagnostic warnings.
-```
 
 ---
 
@@ -230,9 +234,14 @@ flowchart TD
     Z --> AD[output/fault_summary.json]
     AD --> AE[Diagnostic Report Agent]
     AE --> AF[output/diagnostic_report.md]
+
+    E --> AG[DisplayTask]
+    AG --> AH[MAX7219 LED Matrix]
+    AI[FaultInjectTask] --> AG
+    AI --> F
 ```
 
-**Figure 6. Software and data flow diagram.** Live hardware frames and CSV log frames are normalized into `CanFrame` objects before passing through the same validation, dispatch, decoding, statistics, counter tracking, and fault-analysis pipeline. The structured JSON summary then feeds the diagnostic report agent.
+**Figure 6. Software and data flow diagram.** Live hardware frames and CSV log frames are normalized into `CanFrame` objects before passing through the same validation, dispatch, decoding, statistics, counter tracking, and fault-analysis pipeline. The LED display is driven by the STM32 firmware demo mode, while the C++ decoder detects the resulting faults from CAN payloads.
 
 ---
 
@@ -305,10 +314,13 @@ cpp-can-telemetry-decoder/
 │   ├── software_data_flow.md
 │   ├── fault_summary_json.md
 │   ├── live_waveshare_test.md
-│   └── freertos_live_capture_test.md
+│   ├── freertos_live_capture_test.md
+│   └── week10_led_fault_demo_wiring.md
 │
 ├── media/
 │   ├── freertos_can_hardware_wiring.png
+│   ├── freertos_can_led_hardware_wiring.mmd
+│   ├── freertos_can_led_hardware_wiring.svg
 │   ├── physical_hardware_setup.jpg
 │   ├── powered_led_fault_demo_setup.jpg
 │   ├── live_decoder_summary.png
@@ -595,7 +607,7 @@ Severity Notes
 Next Steps
 ```
 
-The C++ decoder performs deterministic parsing and fault detection. The diagnostic report agent only explains the structured fault summary.
+The C++ decoder performs deterministic parsing and fault detection. The diagnostic report agent only explains the structured summary produced by the decoder.
 
 ---
 
@@ -647,6 +659,8 @@ SignalGeneratorTask
 ProcessingTask
 CanTxTask
 StatusLedTask
+DisplayTask
+FaultInjectTask
 SensorSample queue
 telemetry mutex
 latestTelemetry shared structure
@@ -699,6 +713,7 @@ CAN bitrate: 500 kbps
 Frame type: Standard Classic CAN
 DLC: 8 bytes
 Termination: about 60 ohms measured CANH-to-CANL with power off
+LED display: 4-module MAX7219 matrix controlled by STM32 GPIO bit-banging
 ```
 
 ---
@@ -747,9 +762,8 @@ Linux SocketCAN support
 candump log parser
 live can0 input backend
 more realistic vehicle signal scaling
-more fault injection patterns
+additional scripted fault demo modes
 real ADC or sensor-based telemetry on STM32
-optional FreeRTOS FaultInjectTask
 unit tests for parser, decoder, counters, and fault rules
 production-grade serial reconnect/error recovery
 ```
