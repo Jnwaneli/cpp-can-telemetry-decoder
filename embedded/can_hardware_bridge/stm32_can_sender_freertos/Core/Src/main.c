@@ -130,6 +130,13 @@ const osThreadAttr_t DisplayTask_attributes = {
   .priority = (osPriority_t) osPriorityLow,
   .stack_size = 128 * 4
 };
+/* Definitions for FaultInjectTask */
+osThreadId_t FaultInjectTaskHandle;
+const osThreadAttr_t FaultInjectTask_attributes = {
+  .name = "FaultInjectTask",
+  .priority = (osPriority_t) osPriorityLow,
+  .stack_size = 128 * 4
+};
 /* USER CODE BEGIN PV */
 
 osMessageQueueId_t sensorQueueHandle;
@@ -150,6 +157,7 @@ void StartProcessingTask(void *argument);
 void StartCanTxTask(void *argument);
 void StartStatusLedTask(void *argument);
 void StartDisplayTask(void *argument);
+void StartFaultInjectTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -263,6 +271,9 @@ int main(void)
 
   /* creation of DisplayTask */
   DisplayTaskHandle = osThreadNew(StartDisplayTask, NULL, &DisplayTask_attributes);
+
+  /* creation of FaultInjectTask */
+  FaultInjectTaskHandle = osThreadNew(StartFaultInjectTask, NULL, &FaultInjectTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -740,7 +751,7 @@ void StartStatusLedTask(void *argument)
 /* USER CODE END Header_StartDisplayTask */
 void StartDisplayTask(void *argument)
 {
-	/* USER CODE BEGIN StartDisplayTask */
+  /* USER CODE BEGIN StartDisplayTask */
 
 	MAX7219_Init();
 	MAX7219_Clear();
@@ -778,7 +789,36 @@ void StartDisplayTask(void *argument)
 	  }
 	}
 
-	/* USER CODE END StartDisplayTask */
+  /* USER CODE END StartDisplayTask */
+}
+
+/* USER CODE BEGIN Header_StartFaultInjectTask */
+/**
+* @brief Function implementing the FaultInjectTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartFaultInjectTask */
+void StartFaultInjectTask(void *argument)
+{
+	/* USER CODE BEGIN StartFaultInjectTask */
+
+	for (;;)
+	{
+	  set_demo_mode(DEMO_MODE_NORMAL);
+	  osDelay(5000);
+
+	  set_demo_mode(DEMO_MODE_HIGH_TEMP);
+	  osDelay(3000);
+
+	  set_demo_mode(DEMO_MODE_LOW_VOLTAGE);
+	  osDelay(3000);
+
+	  set_demo_mode(DEMO_MODE_SENSOR_INVALID);
+	  osDelay(3000);
+	}
+
+	/* USER CODE END StartFaultInjectTask */
 }
 
 /**
