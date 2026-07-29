@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "max7219.h"
+#include "display_patterns.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -70,6 +71,13 @@ typedef struct
     uint8_t valid;
 } ProcessedTelemetry;
 
+typedef enum {
+  DEMO_MODE_NORMAL = 0,
+  DEMO_MODE_HIGH_TEMP,
+  DEMO_MODE_LOW_VOLTAGE,
+  DEMO_MODE_SENSOR_INVALID
+} DemoFaultMode;
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -115,12 +123,22 @@ const osThreadAttr_t StatusLedTask_attributes = {
   .priority = (osPriority_t) osPriorityLow,
   .stack_size = 128 * 4
 };
+/* Definitions for DisplayTask */
+osThreadId_t DisplayTaskHandle;
+const osThreadAttr_t DisplayTask_attributes = {
+  .name = "DisplayTask",
+  .priority = (osPriority_t) osPriorityLow,
+  .stack_size = 128 * 4
+};
 /* USER CODE BEGIN PV */
 
 osMessageQueueId_t sensorQueueHandle;
 osMutexId_t telemetryMutexHandle;
 
 ProcessedTelemetry latestTelemetry = {0};
+
+static volatile DemoFaultMode currentDemoMode = DEMO_MODE_NORMAL;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -131,6 +149,7 @@ void StartSignalGeneratorTask(void *argument);
 void StartProcessingTask(void *argument);
 void StartCanTxTask(void *argument);
 void StartStatusLedTask(void *argument);
+void StartDisplayTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -138,6 +157,16 @@ void StartStatusLedTask(void *argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+static DemoFaultMode get_demo_mode(void)
+{
+  return currentDemoMode;
+}
+
+static void set_demo_mode(DemoFaultMode mode)
+{
+  currentDemoMode = mode;
+}
 
 /* USER CODE END 0 */
 
@@ -178,9 +207,18 @@ int main(void)
       Error_Handler();
   }
 
-
   MAX7219_Init();
-  MAX7219_DisplayCheck();
+
+  MAX7219_DisplayPattern(LED_PATTERN_CHECK);
+  HAL_Delay(1000);
+
+  MAX7219_DisplayPattern(LED_PATTERN_WARNING);
+  HAL_Delay(1000);
+
+  MAX7219_DisplayPattern(LED_PATTERN_FAULT_X);
+  HAL_Delay(1000);
+
+  MAX7219_DisplayPattern(LED_PATTERN_CHECK);
 
   /* USER CODE END 2 */
 
@@ -222,6 +260,9 @@ int main(void)
 
   /* creation of StatusLedTask */
   StatusLedTaskHandle = osThreadNew(StartStatusLedTask, NULL, &StatusLedTask_attributes);
+
+  /* creation of DisplayTask */
+  DisplayTaskHandle = osThreadNew(StartDisplayTask, NULL, &DisplayTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -688,6 +729,56 @@ void StartStatusLedTask(void *argument)
 	    osDelay(500);
 	  }
   /* USER CODE END StartStatusLedTask */
+}
+
+/* USER CODE BEGIN Header_StartDisplayTask */
+/**
+* @brief Function implementing the DisplayTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartDisplayTask */
+void StartDisplayTask(void *argument)
+{
+	/* USER CODE BEGIN StartDisplayTask */
+
+	MAX7219_Init();
+	MAX7219_Clear();
+
+	for (;;)
+	{
+	  DemoFaultMode mode = get_demo_mode();
+
+	  switch (mode)
+	  {
+	    case DEMO_MODE_NORMAL:
+	      MAX7219_DisplayPattern(LED_PATTERN_CHECK);
+	      osDelay(250);
+	      break;
+
+	    case DEMO_MODE_HIGH_TEMP:
+	      MAX7219_DisplayPattern(LED_PATTERN_WARNING);
+	      osDelay(250);
+	      MAX7219_Clear();
+	      osDelay(250);
+	      break;
+
+	    case DEMO_MODE_LOW_VOLTAGE:
+	    case DEMO_MODE_SENSOR_INVALID:
+	      MAX7219_DisplayPattern(LED_PATTERN_FAULT_X);
+	      osDelay(250);
+	      MAX7219_Clear();
+	      osDelay(250);
+	      break;
+
+	    default:
+	      MAX7219_DisplayPattern(LED_PATTERN_FAULT_X);
+	      osDelay(250);
+	      break;
+	  }
+	}
+
+	/* USER CODE END StartDisplayTask */
 }
 
 /**

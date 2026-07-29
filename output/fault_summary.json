@@ -1,7 +1,7 @@
 {
   "source": "waveshare_live",
-  "frames_processed": 2000,
-  "valid_frames": 2000,
+  "frames_processed": 100,
+  "valid_frames": 100,
   "invalid_dlc": 0,
   "unknown_ids": 0,
   "faults": 0,
