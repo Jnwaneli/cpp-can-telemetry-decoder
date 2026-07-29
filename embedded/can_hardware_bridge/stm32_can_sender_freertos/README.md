@@ -4,9 +4,9 @@
 
 This firmware runs on the STM32 NUCLEO-G431RB and transmits simulated telemetry data over CAN using FreeRTOS.
 
-The firmware generates live simulated sensor values, passes them through a FreeRTOS queue, stores the latest processed telemetry in a mutex-protected shared state, and transmits CAN frames through the STM32 FDCAN peripheral.
+The firmware generates live simulated sensor values, passes them through a FreeRTOS queue, stores the latest processed telemetry in a mutex-protected shared state, and transmits CAN frames through the STM32 FDCAN peripheral. It also drives a 4-module MAX7219 LED matrix for a button-gated visual fault demo.
 
-The desktop C++ project receives these hardware-generated frames directly through the Waveshare USB-CAN serial workflow using `WaveshareSerialFrameSource`.
+The desktop C++ project receives the hardware-generated CAN frames through the Waveshare USB-CAN serial workflow using `WaveshareSerialFrameSource`.
 
 ---
 
@@ -18,14 +18,16 @@ SignalGeneratorTask: working
 ProcessingTask: working
 CanTxTask: working
 StatusLedTask: working
+DisplayTask: working
+FaultInjectTask: working
 FDCAN transmit: working
 SN65HVD230 CAN bridge: working
 Waveshare USB-CAN receive: working
-Multi-frame CAN transmit: working
+MAX7219 LED matrix display: working
+Button-gated LED fault demo: working
 Desktop C++ live Waveshare ingestion: working
-2,000-frame live desktop decode test: passed
-Demo screenshots: committed in /media
-Muted demo videos: committed in /media
+2,000-frame clean live desktop decode test: passed
+Side-by-side LED fault demo video: committed in /media
 ```
 
 The firmware successfully transmits the following standard CAN IDs:
@@ -67,6 +69,8 @@ WaveshareSerialFrameSource
 Desktop C++ decoder
 ```
 
+The MAX7219 LED matrix is connected separately to the NUCLEO GPIO pins and does not communicate with the desktop decoder directly. The LED state and the injected CAN fault payloads are synchronized because both are driven by the same firmware demo mode.
+
 The measured CANH-to-CANL termination resistance with power off was about:
 
 ```text
@@ -77,15 +81,49 @@ This indicates two 120 ohm terminations are active on the CAN bus.
 
 ---
 
+## Wiring Summary
+
+### CAN wiring
+
+```text
+NUCLEO 3.3V       -> SN65HVD230 VCC
+NUCLEO GND        -> SN65HVD230 GND
+PA12 / FDCAN1_TX  -> SN65HVD230 TXD
+PA11 / FDCAN1_RX  <- SN65HVD230 RXD
+SN65HVD230 CANH   -> Waveshare CANH
+SN65HVD230 CANL   -> Waveshare CANL
+SN65HVD230 GND    -> Waveshare GND
+```
+
+### MAX7219 LED matrix wiring
+
+```text
+NUCLEO 5V   -> MAX7219 VCC
+NUCLEO GND  -> MAX7219 GND
+PB6 / D10   -> MAX7219 DIN
+PB7         -> MAX7219 CLK
+PB8 / D15   -> MAX7219 CS / LOAD
+```
+
+Detailed wiring documentation is in:
+
+```text
+docs/week10_led_fault_demo_wiring.md
+```
+
+---
+
 ## FreeRTOS Sender Summary
 
-The FreeRTOS sender uses four tasks:
+The FreeRTOS sender uses six tasks:
 
 ```text
 SignalGeneratorTask
 ProcessingTask
 CanTxTask
 StatusLedTask
+DisplayTask
+FaultInjectTask
 ```
 
 It also uses:
@@ -115,6 +153,24 @@ STM32 FDCAN
 SN65HVD230
         ↓
 Waveshare USB-CAN
+        ↓
+Desktop C++ decoder
+```
+
+LED demo pipeline:
+
+```text
+NUCLEO user button
+        ↓
+demoStarted flag
+        ↓
+FaultInjectTask cycles demo mode
+        ↓
+DisplayTask updates MAX7219 pattern
+        ↓
+CanTxTask injects matching CAN payload values
+        ↓
+Desktop decoder reports matching faults
 ```
 
 ---
@@ -150,12 +206,14 @@ USE_NEWLIB_REENTRANT: Enabled
 
 ### Tasks
 
-| Task | Priority | Stack | Purpose |
-|---|---:|---:|---|
-| `SignalGeneratorTask` | `osPriorityNormal` | 128 words | Generates simulated live telemetry samples |
-| `ProcessingTask` | `osPriorityNormal` | 128 words | Receives samples and updates shared telemetry |
-| `CanTxTask` | `osPriorityAboveNormal` | 256 words | Packages and transmits CAN frames |
-| `StatusLedTask` | `osPriorityLow` | 128 words | Blinks heartbeat LED |
+| Task | Priority | Purpose |
+|---|---:|---|
+| `SignalGeneratorTask` | `osPriorityNormal` | Generates simulated live telemetry samples |
+| `ProcessingTask` | `osPriorityNormal` | Receives samples and updates shared telemetry |
+| `CanTxTask` | `osPriorityAboveNormal` | Packages and transmits CAN frames |
+| `StatusLedTask` | `osPriorityLow` | Blinks heartbeat LED |
+| `DisplayTask` | `osPriorityLow` | Drives the MAX7219 LED matrix |
+| `FaultInjectTask` | `osPriorityLow` | Cycles the button-gated demo fault modes |
 
 ---
 
@@ -192,7 +250,7 @@ When a `SensorSample` arrives, it copies the data into `latestTelemetry`. The co
 
 ### CanTxTask
 
-`CanTxTask` reads `latestTelemetry` using the mutex, copies it into a local variable, releases the mutex, and then transmits CAN frames.
+`CanTxTask` reads `latestTelemetry` using the mutex, copies it into a local variable, releases the mutex, applies the current demo fault mode, and then transmits CAN frames.
 
 This is important because the task should not hold the mutex while sending multiple CAN frames.
 
@@ -211,6 +269,33 @@ Current LED function:
 ```c
 BSP_LED_Toggle(LED_GREEN);
 ```
+
+### DisplayTask
+
+`DisplayTask` initializes the MAX7219 LED matrix and controls the visual demo state.
+
+Before the user button is pressed, it runs a scanner sweep startup animation. After the button is pressed, it displays the pattern that matches the current firmware demo mode.
+
+### FaultInjectTask
+
+`FaultInjectTask` waits until the NUCLEO user button starts the demo. After that, it cycles through normal, high-temperature, low-voltage, and invalid-sensor demo modes.
+
+---
+
+## Button-Gated LED Fault Demo
+
+At startup, the LED matrix runs a scanner sweep while the firmware waits for the NUCLEO user button.
+
+After the button is pressed, the firmware cycles through these modes:
+
+| LED state | Firmware mode | CAN payload effect | Decoder result |
+|---|---|---|---|
+| Check mark | `DEMO_MODE_NORMAL` | Normal battery, temperature, and status values | Clean telemetry |
+| Exclamation mark | `DEMO_MODE_HIGH_TEMP` | `temperature_deciC = 950` | High-temperature fault |
+| X symbol | `DEMO_MODE_LOW_VOLTAGE` | `battery_mV = 9500` | Low-voltage fault |
+| X symbol | `DEMO_MODE_SENSOR_INVALID` | `status = 0x06` | Sensor-invalid fault |
+
+The LED matrix and decoder are not directly connected. The firmware demo mode drives both the displayed LED pattern and the CAN values that the desktop decoder receives.
 
 ---
 
@@ -309,7 +394,7 @@ The transmit cycle is approximately every 100 ms unless slowed for testing. Beca
 From the desktop project root, build the C++ decoder with the Waveshare serial backend included:
 
 ```powershell
-g++ -std=c++17 -Wall -Wextra -Iinclude main.cpp src/circular_buffer.cpp src/telemetry_decoder.cpp src/bit_utils.cpp src/fault_analyzer.cpp src/decoder_stats.cpp src/can_dispatcher.cpp src/can_log_parser.cpp src/csv_frame_source.cpp src/waveshare_serial_frame_source.cpp src/signal_stats.cpp src/counter_tracker.cpp src/stuck_sensor_tracker.cpp -o main
+g++ -std=c++17 -Wall -Wextra -Iinclude main.cpp src/circular_buffer.cpp src/telemetry_decoder.cpp src/bit_utils.cpp src/fault_analyzer.cpp src/decoder_stats.cpp src/can_dispatcher.cpp src/can_log_parser.cpp src/csv_frame_source.cpp src/waveshare_serial_frame_source.cpp src/fault_summary_writer.cpp src/signal_stats.cpp src/counter_tracker.cpp src/stuck_sensor_tracker.cpp -o main
 ```
 
 Close the Waveshare receive software before running live serial mode because the C++ application needs to open the COM port directly.
@@ -361,13 +446,14 @@ The root project README includes the current screenshots and muted demo video li
 Relevant media files:
 
 ```text
+media/freertos_can_hardware_wiring.png
 media/live_decoder_summary.png
 media/waveshare_receive.png
+media/powered_led_fault_demo_setup.jpg
 media/decoder_demo.mp4
 media/waveshare_demo.mp4
+media/led_fault_demo_side_by_side.mp4
 ```
-
-The MP4 demo videos are intentionally muted. GitHub may show a large-file preview message when opening committed MP4 files directly, so the root README links to the raw files on the `main` branch.
 
 ---
 
@@ -434,8 +520,10 @@ Confirm:
 
 ```text
 Status LED blinks
+MAX7219 startup scanner sweep appears
+NUCLEO user button starts the LED fault demo
 Waveshare receives 0x100, 0x101, 0x102, and 0x200
-Desktop C++ live reader can decode the frames
+Desktop C++ live reader can decode the frames and report demo faults
 ```
 
 ---
@@ -446,7 +534,6 @@ Desktop C++ live reader can decode the frames
 The firmware currently generates simulated telemetry values rather than real ADC sensor values.
 The desktop live reader is implemented for the current Windows/Waveshare workflow.
 SocketCAN can0 support is not implemented yet.
-The AI diagnostic assistant is not implemented yet.
 Production-grade serial reconnect/recovery behavior is future polish.
 ```
 
@@ -456,4 +543,4 @@ Production-grade serial reconnect/recovery behavior is future polish.
 
 This FreeRTOS firmware provides the live embedded CAN source for the C++ CAN Telemetry Decoder and Fault Analyzer.
 
-The firmware side generates and transmits the CAN traffic. The desktop side receives it through the Waveshare USB-CAN serial backend and feeds it through the existing C++ validation, decoding, statistics, and fault-analysis pipeline.
+The firmware side generates and transmits CAN traffic through the SN65HVD230 transceiver while also driving a MAX7219 LED matrix. The desktop side receives the CAN frames through the Waveshare USB-CAN serial backend and feeds them through the existing C++ validation, decoding, statistics, and fault-analysis pipeline.
