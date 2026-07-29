@@ -26,6 +26,7 @@ WaveshareSerialFrameSource backend: working on Windows
 STM32 FreeRTOS CAN sender: working
 SN65HVD230 CAN transceiver path: tested
 Waveshare USB-CAN live ingestion: tested
+Button-gated STM32/MAX7219 LED fault demo: working
 fault_summary.json output: working
 Diagnostic report agent: working after fault_summary.json is generated
 Demo screenshots: committed
@@ -117,6 +118,14 @@ The physical hardware setup shows the NUCLEO-G431RB connected to the SN65HVD230 
 
 **Figure 4. Physical STM32 FreeRTOS CAN hardware test setup.** The NUCLEO-G431RB is wired to the SN65HVD230 CAN transceiver on a breadboard. The transceiver connects over CANH/CANL to the Waveshare USB-CAN adapter for PC-side live CAN receive testing.
 
+### Fully Powered LED Fault Demo Circuit
+
+The fully powered hardware setup shows the STM32 NUCLEO-G431RB, MAX7219 LED matrix, SN65HVD230 CAN transceiver, and Waveshare USB-CAN adapter connected together during the LED fault demo workflow.
+
+<img src="./media/powered_led_fault_demo_setup.jpg" alt="Fully powered STM32 MAX7219 LED fault demo circuit" width="900">
+
+**Figure 5. Fully powered STM32/MAX7219 LED fault demo circuit.** The MAX7219 LED matrix, STM32 FreeRTOS sender, CAN transceiver, and Waveshare USB-CAN adapter are powered and connected for the synchronized LED display and live CAN fault-injection demo.
+
 ---
 
 ## Demo Videos
@@ -138,6 +147,24 @@ https://github.com/user-attachments/assets/7c140fec-3e94-411c-a61a-abba91898925
 [Watch in higher quality / download original Waveshare MP4](https://github.com/Jnwaneli/cpp-can-telemetry-decoder/raw/main/media/waveshare_demo.mp4?cache=muted-final)
 
 **Video 2. Waveshare receive demo.** The Waveshare USB-CAN receive software shows live CAN traffic from the STM32 FreeRTOS telemetry sender at 500 kbps.
+
+### STM32 FreeRTOS LED Fault Demo
+
+This demo shows the STM32 FreeRTOS firmware, MAX7219 8x8 LED matrix, and C++ CAN decoder working together in real time. The NUCLEO user button starts the demo sequence. Before the button press, the LED matrix runs a scanner sweep startup animation. After the button press, the firmware cycles through demo fault modes and injects matching values into the CAN payload.
+
+The LED matrix and decoder are not directly connected to each other. Instead, both are driven by the same firmware demo mode:
+
+- Check mark: normal telemetry values
+- Exclamation mark: high-temperature demo fault
+- X symbol: low-voltage or invalid-sensor demo fault
+
+The C++ decoder receives the live CAN frames through the Waveshare USB-CAN adapter and reports the corresponding fault summary.
+
+https://github.com/user-attachments/assets/3a10cdd9-0971-4c32-9f4d-37c49d1fd2c0
+
+[Watch in higher quality / download original LED fault demo MP4](https://github.com/Jnwaneli/cpp-can-telemetry-decoder/raw/main/media/led_fault_demo_side_by_side.mp4?cache=led-fault-demo-final)
+
+**Video 3. Button-gated STM32 FreeRTOS LED fault demo.** The left side shows the C++ live CAN decoder processing frames from the Waveshare USB-CAN adapter. The right side shows the STM32/MAX7219 LED matrix displaying the synchronized fault state. Pressing the NUCLEO user button starts the fault demo cycle.
 
 Suggested demo caption:
 
@@ -205,7 +232,7 @@ flowchart TD
     AE --> AF[output/diagnostic_report.md]
 ```
 
-**Figure 5. Software and data flow diagram.** Live hardware frames and CSV log frames are normalized into `CanFrame` objects before passing through the same validation, dispatch, decoding, statistics, counter tracking, and fault-analysis pipeline. The structured JSON summary then feeds the diagnostic report agent.
+**Figure 6. Software and data flow diagram.** Live hardware frames and CSV log frames are normalized into `CanFrame` objects before passing through the same validation, dispatch, decoding, statistics, counter tracking, and fault-analysis pipeline. The structured JSON summary then feeds the diagnostic report agent.
 
 ---
 
@@ -283,10 +310,14 @@ cpp-can-telemetry-decoder/
 ├── media/
 │   ├── freertos_can_hardware_wiring.png
 │   ├── physical_hardware_setup.jpg
+│   ├── powered_led_fault_demo_setup.jpg
 │   ├── live_decoder_summary.png
 │   ├── waveshare_receive.png
 │   ├── decoder_demo.mp4
-│   └── waveshare_demo.mp4
+│   ├── waveshare_demo.mp4
+│   ├── decoder_demo_github.mp4
+│   ├── waveshare_demo_github.mp4
+│   └── led_fault_demo_side_by_side.mp4
 │
 ├── embedded/
 │   └── can_hardware_bridge/
@@ -633,6 +664,8 @@ The sender transmits these CAN IDs repeatedly:
 
 `CanTxTask` owns the CAN transmit counter so the desktop decoder does not falsely detect dropped frames.
 
+The LED fault demo adds a button-gated sequence that uses a scanner startup animation on the MAX7219 matrix before cycling through normal, high-temperature, low-voltage, and invalid-sensor demo modes. The same firmware demo mode drives both the LED symbol and the CAN payload values sent to the C++ decoder.
+
 ---
 
 ## Hardware Path
@@ -697,6 +730,8 @@ Diagnostic report agent
 STM32 FreeRTOS telemetry sender
 FreeRTOS queue and mutex architecture
 Direct Waveshare USB-CAN live ingestion on Windows
+Button-gated STM32/MAX7219 LED fault demo
+Synchronized LED fault display and CAN fault injection
 Hardware wiring schematic
 Physical hardware setup photo
 Live demo screenshots
@@ -740,3 +775,5 @@ The diagnostic report agent explains the JSON summary; it does not perform raw C
 This project connects desktop C++ decoding, fault analysis, STM32 FreeRTOS firmware, real CAN hardware, structured JSON output, and a diagnostic report layer into one end-to-end telemetry workflow.
 
 The STM32 FreeRTOS firmware generates live simulated telemetry frames and sends them over CAN through an SN65HVD230 transceiver. The Waveshare USB-CAN adapter receives those frames, and the C++ application reads them directly through a live serial backend. Each received packet becomes a `CanFrame` and flows through the same validation, dispatcher, decoder, statistics, and fault-analysis pipeline used for CSV logs. The decoder then writes `output/fault_summary.json`, and the diagnostic report agent converts that structured summary into `output/diagnostic_report.md`.
+
+The LED fault demo extends this story by showing that the STM32 firmware can drive both a physical MAX7219 LED status display and matching CAN fault payloads from the same FreeRTOS demo mode. This makes the visual embedded output and the C++ decoder's fault summary stay synchronized without requiring the LED matrix and decoder to communicate directly.
