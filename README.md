@@ -125,7 +125,7 @@ The demo videos are intentionally muted and use GitHub attachment links so they 
 
 ### Decoder Live Ingestion Demo
 
-https://github.com/user-attachments/assets/c2f1470f-7d39-4ade-a3b4-8d83233d1ad6
+https://github.com/user-attachments/assets/247298cb-0269-4862-9e76-c4814260db50
 
 [Watch in higher quality / download original decoder MP4](https://github.com/Jnwaneli/cpp-can-telemetry-decoder/raw/main/media/decoder_demo.mp4?cache=muted-final)
 
@@ -133,7 +133,7 @@ https://github.com/user-attachments/assets/c2f1470f-7d39-4ade-a3b4-8d83233d1ad6
 
 ### Waveshare Receive Demo
 
-https://github.com/user-attachments/assets/6ba00dfe-b234-4819-b4a3-3b839b08babc
+https://github.com/user-attachments/assets/7c140fec-3e94-411c-a61a-abba91898925
 
 [Watch in higher quality / download original Waveshare MP4](https://github.com/Jnwaneli/cpp-can-telemetry-decoder/raw/main/media/waveshare_demo.mp4?cache=muted-final)
 
