@@ -22,7 +22,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "max7219.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -106,7 +106,7 @@ osThreadId_t CanTxTaskHandle;
 const osThreadAttr_t CanTxTask_attributes = {
   .name = "CanTxTask",
   .priority = (osPriority_t) osPriorityAboveNormal,
-  .stack_size = 256 * 4
+  .stack_size = 128 * 4
 };
 /* Definitions for StatusLedTask */
 osThreadId_t StatusLedTaskHandle;
@@ -177,6 +177,10 @@ int main(void)
   {
       Error_Handler();
   }
+
+
+  MAX7219_Init();
+  MAX7219_DisplayCheck();
 
   /* USER CODE END 2 */
 
@@ -253,6 +257,10 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
 }
@@ -353,6 +361,7 @@ static void MX_FDCAN1_Init(void)
   */
 static void MX_GPIO_Init(void)
 {
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
   /* USER CODE BEGIN MX_GPIO_Init_1 */
 
   /* USER CODE END MX_GPIO_Init_1 */
@@ -362,6 +371,16 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOF_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, MAX7219_DIN_Pin|MAX7219_CLK_Pin|MAX7219_CS_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pins : MAX7219_DIN_Pin MAX7219_CLK_Pin MAX7219_CS_Pin */
+  GPIO_InitStruct.Pin = MAX7219_DIN_Pin|MAX7219_CLK_Pin|MAX7219_CS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
@@ -555,6 +574,7 @@ void StartSignalGeneratorTask(void *argument)
 
   /* USER CODE END 5 */
 }
+
 /* USER CODE BEGIN Header_StartProcessingTask */
 /**
 * @brief Function implementing the ProcessingTask thread.
@@ -651,6 +671,7 @@ void StartCanTxTask(void *argument)
 
   /* USER CODE END StartCanTxTask */
 }
+
 /* USER CODE BEGIN Header_StartStatusLedTask */
 /**
 * @brief Function implementing the StatusLedTask thread.
