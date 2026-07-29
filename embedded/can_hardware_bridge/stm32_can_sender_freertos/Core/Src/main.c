@@ -138,7 +138,7 @@ const osThreadAttr_t FaultInjectTask_attributes = {
   .stack_size = 128 * 4
 };
 /* USER CODE BEGIN PV */
-
+static volatile uint8_t demoStarted = 0;
 osMessageQueueId_t sensorQueueHandle;
 osMutexId_t telemetryMutexHandle;
 
@@ -166,6 +166,16 @@ void StartFaultInjectTask(void *argument);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+static uint8_t is_demo_started(void)
+{
+  return demoStarted;
+}
+
+static void start_demo(void)
+{
+  demoStarted = 1;
+}
+
 static DemoFaultMode get_demo_mode(void)
 {
   return currentDemoMode;
@@ -174,6 +184,19 @@ static DemoFaultMode get_demo_mode(void)
 static void set_demo_mode(DemoFaultMode mode)
 {
   currentDemoMode = mode;
+}
+
+static void poll_demo_start_button(void)
+{
+  if (!is_demo_started() && BSP_PB_GetState(BUTTON_USER) == GPIO_PIN_SET)
+  {
+    osDelay(30);
+
+    if (BSP_PB_GetState(BUTTON_USER) == GPIO_PIN_SET)
+    {
+      start_demo();
+    }
+  }
 }
 
 /* USER CODE END 0 */
@@ -287,7 +310,7 @@ int main(void)
   BSP_LED_Init(LED_GREEN);
 
   /* Initialize USER push-button, will be used to trigger an interrupt each time it's pressed.*/
-  BSP_PB_Init(BUTTON_USER, BUTTON_MODE_EXTI);
+  BSP_PB_Init(BUTTON_USER, BUTTON_MODE_GPIO);
 
   /* Initialize COM1 port (115200, 8 bits (7-bit data + 1 stop bit), no parity */
   BspCOMInit.BaudRate   = 115200;
@@ -440,6 +463,94 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+static void display_scanner_sweep(void)
+{
+  const uint8_t sweep_delay_ms = 80;
+
+  for (uint8_t col = 0; col < 8; col++)
+  {
+    uint8_t pattern[8];
+
+    for (uint8_t row = 0; row < 8; row++)
+    {
+      pattern[row] = (uint8_t)(1U << col);
+    }
+
+    MAX7219_DisplayPattern(pattern);
+    osDelay(sweep_delay_ms);
+
+    poll_demo_start_button();
+
+    if (is_demo_started())
+    {
+      return;
+    }
+  }
+
+  for (int8_t col = 6; col >= 1; col--)
+  {
+    uint8_t pattern[8];
+
+    for (uint8_t row = 0; row < 8; row++)
+    {
+      pattern[row] = (uint8_t)(1U << col);
+    }
+
+    MAX7219_DisplayPattern(pattern);
+    osDelay(sweep_delay_ms);
+
+    poll_demo_start_button();
+
+    if (is_demo_started())
+    {
+      return;
+    }
+  }
+
+  MAX7219_Clear();
+  osDelay(150);
+
+  poll_demo_start_button();
+}
+
+
+static void apply_demo_fault(ProcessedTelemetry *t, DemoFaultMode mode)
+{
+  if (t == NULL)
+  {
+    return;
+  }
+
+  /*
+   * Start every demo mode from a known-good baseline.
+   * This prevents the previous fault mode from leaking into the next mode.
+   */
+  t->battery_mV = 12600;
+  t->temperature_deciC = 345;
+  t->status = 0x07;
+
+  switch (mode)
+  {
+    case DEMO_MODE_NORMAL:
+      break;
+
+    case DEMO_MODE_HIGH_TEMP:
+      t->temperature_deciC = 950;
+      break;
+
+    case DEMO_MODE_LOW_VOLTAGE:
+      t->battery_mV = 9500;
+      break;
+
+    case DEMO_MODE_SENSOR_INVALID:
+      t->status = 0x06;
+      break;
+
+    default:
+      break;
+  }
+}
 
 static void pack_u16_le(uint8_t *data, uint8_t index, uint16_t value)
 {
@@ -698,6 +809,8 @@ void StartCanTxTask(void *argument)
     {
       local = latestTelemetry;
 
+      DemoFaultMode mode = get_demo_mode();
+
       if (latestTelemetry.valid)
       {
         latestTelemetry.counter++;
@@ -707,6 +820,8 @@ void StartCanTxTask(void *argument)
 
       if (local.valid)
       {
+        apply_demo_fault(&local, mode);
+
         send_can_0x100(&local);
         osDelay(2);
 
@@ -723,7 +838,6 @@ void StartCanTxTask(void *argument)
 
   /* USER CODE END StartCanTxTask */
 }
-
 /* USER CODE BEGIN Header_StartStatusLedTask */
 /**
 * @brief Function implementing the StatusLedTask thread.
@@ -753,41 +867,49 @@ void StartDisplayTask(void *argument)
 {
   /* USER CODE BEGIN StartDisplayTask */
 
-	MAX7219_Init();
-	MAX7219_Clear();
+  MAX7219_Init();
+  MAX7219_Clear();
 
-	for (;;)
-	{
-	  DemoFaultMode mode = get_demo_mode();
+  while (!is_demo_started())
+  {
+    display_scanner_sweep();
+  }
 
-	  switch (mode)
-	  {
-	    case DEMO_MODE_NORMAL:
-	      MAX7219_DisplayPattern(LED_PATTERN_CHECK);
-	      osDelay(250);
-	      break;
+  MAX7219_DisplayPattern(LED_PATTERN_CHECK);
+  osDelay(500);
 
-	    case DEMO_MODE_HIGH_TEMP:
-	      MAX7219_DisplayPattern(LED_PATTERN_WARNING);
-	      osDelay(250);
-	      MAX7219_Clear();
-	      osDelay(250);
-	      break;
+  for (;;)
+  {
+    DemoFaultMode mode = get_demo_mode();
 
-	    case DEMO_MODE_LOW_VOLTAGE:
-	    case DEMO_MODE_SENSOR_INVALID:
-	      MAX7219_DisplayPattern(LED_PATTERN_FAULT_X);
-	      osDelay(250);
-	      MAX7219_Clear();
-	      osDelay(250);
-	      break;
+    switch (mode)
+    {
+      case DEMO_MODE_NORMAL:
+        MAX7219_DisplayPattern(LED_PATTERN_CHECK);
+        osDelay(250);
+        break;
 
-	    default:
-	      MAX7219_DisplayPattern(LED_PATTERN_FAULT_X);
-	      osDelay(250);
-	      break;
-	  }
-	}
+      case DEMO_MODE_HIGH_TEMP:
+        MAX7219_DisplayPattern(LED_PATTERN_WARNING);
+        osDelay(250);
+        MAX7219_Clear();
+        osDelay(250);
+        break;
+
+      case DEMO_MODE_LOW_VOLTAGE:
+      case DEMO_MODE_SENSOR_INVALID:
+        MAX7219_DisplayPattern(LED_PATTERN_FAULT_X);
+        osDelay(250);
+        MAX7219_Clear();
+        osDelay(250);
+        break;
+
+      default:
+        MAX7219_DisplayPattern(LED_PATTERN_FAULT_X);
+        osDelay(250);
+        break;
+    }
+  }
 
   /* USER CODE END StartDisplayTask */
 }
@@ -801,24 +923,32 @@ void StartDisplayTask(void *argument)
 /* USER CODE END Header_StartFaultInjectTask */
 void StartFaultInjectTask(void *argument)
 {
-	/* USER CODE BEGIN StartFaultInjectTask */
+  /* USER CODE BEGIN StartFaultInjectTask */
 
-	for (;;)
-	{
-	  set_demo_mode(DEMO_MODE_NORMAL);
-	  osDelay(5000);
+  set_demo_mode(DEMO_MODE_NORMAL);
 
-	  set_demo_mode(DEMO_MODE_HIGH_TEMP);
-	  osDelay(3000);
+  while (!is_demo_started())
+  {
+    poll_demo_start_button();
+    osDelay(50);
+  }
 
-	  set_demo_mode(DEMO_MODE_LOW_VOLTAGE);
-	  osDelay(3000);
+  for (;;)
+  {
+    set_demo_mode(DEMO_MODE_NORMAL);
+    osDelay(5000);
 
-	  set_demo_mode(DEMO_MODE_SENSOR_INVALID);
-	  osDelay(3000);
-	}
+    set_demo_mode(DEMO_MODE_HIGH_TEMP);
+    osDelay(3000);
 
-	/* USER CODE END StartFaultInjectTask */
+    set_demo_mode(DEMO_MODE_LOW_VOLTAGE);
+    osDelay(3000);
+
+    set_demo_mode(DEMO_MODE_SENSOR_INVALID);
+    osDelay(3000);
+  }
+
+  /* USER CODE END StartFaultInjectTask */
 }
 
 /**
