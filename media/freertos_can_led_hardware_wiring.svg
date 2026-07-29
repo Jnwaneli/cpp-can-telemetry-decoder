@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+  <style>
+    .box { fill: #f7f7f7; stroke: #222; stroke-width: 2; rx: 12; }
+    .title { font-family: Arial, sans-serif; font-size: 22px; font-weight: bold; fill: #111; }
+    .label { font-family: Arial, sans-serif; font-size: 17px; fill: #111; }
+    .small { font-family: Arial, sans-serif; font-size: 14px; fill: #333; }
+    .wire { stroke: #222; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+    .power { stroke: #b00020; stroke-width: 2.5; fill: none; marker-end: url(#arrow-red); }
+    .ground { stroke: #555; stroke-width: 2.5; fill: none; marker-end: url(#arrow-gray); }
+    .can { stroke: #0b62a3; stroke-width: 2.5; fill: none; marker-end: url(#arrow-blue); }
+    .led { stroke: #7a3db8; stroke-width: 2.5; fill: none; marker-end: url(#arrow-purple); }
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#222" /></marker>
+    <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#b00020" /></marker>
+    <marker id="arrow-gray" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#555" /></marker>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#0b62a3" /></marker>
+    <marker id="arrow-purple" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#7a3db8" /></marker>
+  </defs>
+
+  <text x="600" y="45" text-anchor="middle" class="title">STM32 FreeRTOS CAN + MAX7219 LED Fault Demo Wiring</text>
+
+  <rect x="55" y="120" width="300" height="250" class="box" />
+  <text x="205" y="155" text-anchor="middle" class="title">NUCLEO-G431RB</text>
+  <text x="85" y="200" class="label">PA12 / FDCAN1_TX</text>
+  <text x="85" y="230" class="label">PA11 / FDCAN1_RX</text>
+  <text x="85" y="260" class="label">3.3V</text>
+  <text x="85" y="290" class="label">5V</text>
+  <text x="85" y="320" class="label">GND</text>
+  <text x="85" y="350" class="label">PB6 / D10, PB7, PB8 / D15</text>
+
+  <rect x="475" y="120" width="270" height="190" class="box" />
+  <text x="610" y="155" text-anchor="middle" class="title">SN65HVD230</text>
+  <text x="505" y="200" class="label">TXD</text>
+  <text x="505" y="230" class="label">RXD</text>
+  <text x="505" y="260" class="label">VCC / GND</text>
+  <text x="505" y="290" class="label">CANH / CANL</text>
+
+  <rect x="900" y="145" width="245" height="135" class="box" />
+  <text x="1022" y="185" text-anchor="middle" class="title">Waveshare USB-CAN</text>
+  <text x="930" y="230" class="label">CANH</text>
+  <text x="930" y="255" class="label">CANL</text>
+
+  <rect x="475" y="455" width="355" height="185" class="box" />
+  <text x="652" y="490" text-anchor="middle" class="title">MAX7219 4-Module LED Matrix</text>
+  <text x="505" y="535" class="label">VCC = 5V</text>
+  <text x="505" y="565" class="label">GND = Common ground</text>
+  <text x="505" y="595" class="label">DIN = PB6 / D10</text>
+  <text x="505" y="620" class="label">CLK = PB7</text>
+  <text x="505" y="645" class="label">CS / LOAD = PB8 / D15</text>
+
+  <path d="M355 198 C410 198, 430 198, 475 198" class="can" />
+  <text x="405" y="188" class="small">CAN TX</text>
+  <path d="M475 228 C430 228, 410 228, 355 228" class="can" />
+  <text x="405" y="248" class="small">CAN RX</text>
+  <path d="M355 260 C410 260, 430 260, 475 260" class="power" />
+  <text x="397" y="280" class="small">3.3V</text>
+  <path d="M355 320 C410 320, 430 320, 475 280" class="ground" />
+  <text x="390" y="325" class="small">GND</text>
+
+  <path d="M745 285 C805 285, 845 220, 900 220" class="can" />
+  <text x="795" y="260" class="small">CANH</text>
+  <path d="M745 300 C805 300, 845 250, 900 250" class="can" />
+  <text x="795" y="315" class="small">CANL</text>
+  <path d="M745 270 C805 270, 845 270, 900 270" class="ground" />
+  <text x="790" y="292" class="small">common GND</text>
+
+  <path d="M355 290 C395 350, 430 500, 475 535" class="power" />
+  <text x="365" y="420" class="small">5V</text>
+  <path d="M355 320 C390 390, 430 540, 475 565" class="ground" />
+  <text x="365" y="460" class="small">GND</text>
+  <path d="M355 350 C390 445, 430 590, 475 595" class="led" />
+  <text x="372" y="525" class="small">PB6 DIN</text>
+  <path d="M355 355 C385 470, 425 615, 475 620" class="led" />
+  <text x="365" y="565" class="small">PB7 CLK</text>
+  <path d="M355 360 C380 500, 420 645, 475 645" class="led" />
+  <text x="365" y="615" class="small">PB8 CS</text>
+
+  <text x="600" y="690" text-anchor="middle" class="small">CAN frames: 0x100, 0x101, 0x102, 0x200 | LED state is synchronized with firmware demo mode and injected CAN payloads.</text>
+</svg>
